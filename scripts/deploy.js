@@ -32,6 +32,16 @@ async function main() {
   const arenaManagerGeneratorContract = await arenaManagerGenerator.deploy(psRouterAddress, wbnbAddress);
   const arenaManagerGeneratorAddress = arenaManagerGeneratorContract.address;
   console.log(`ArenaManager deployed to: ${arenaManagerGeneratorAddress}`);
+
+  const redGenerator = await ethers.getContractFactory('VersusRed');
+  const redGeneratorContract = await redGenerator.deploy(arenaManagerGeneratorAddress);
+  const redGeneratorAddress = redGeneratorContract.address;
+  console.log(`Red deployed to: ${redGeneratorAddress}`);
+
+  const blueGenerator = await ethers.getContractFactory('VersusBlue');
+  const blueGeneratorContract = await blueGenerator.deploy(arenaManagerGeneratorAddress);
+  const blueGeneratorAddress = blueGeneratorContract.address;
+  console.log(`Blue deployed to: ${blueGeneratorAddress}`);
 }
 
 main()
