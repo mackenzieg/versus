@@ -28,20 +28,10 @@ async function main() {
   const uniswapV2LockerAddress = uniswapV2LockerContract.address;
   console.log(`Locker deployed to: ${uniswapV2LockerAddress}`);
 
-  const presaleSettings = await ethers.getContractFactory('PresaleSettings');
-  const presaleSettingsContract = await presaleSettings.deploy();
-  const presaleSettingsAddress = presaleSettingsContract.address;
-  console.log(`PresaleSettings deployed to: ${presaleSettingsAddress}`);
-
-  const presaleFactory = await ethers.getContractFactory('PresaleFactory');
-  const presaleFactoryContract = await presaleFactory.deploy();
-  const presaleFactoryAddress = presaleFactoryContract.address;
-  console.log(`PresaleFactory deployed to: ${presaleFactoryAddress}`);
-
-  const presaleGenerator = await ethers.getContractFactory('PresaleGenerator01');
-  const presaleGeneratorContract = await presaleGenerator.deploy(presaleFactoryAddress, presaleSettingsAddress);
-  const presaleGeneratorAddress = presaleGeneratorContract.address;
-  console.log(`PresaleGenerator deployed to: ${presaleGeneratorAddress}`);
+  const arenaManagerGenerator = await ethers.getContractFactory('ArenaManager');
+  const arenaManagerGeneratorContract = await arenaManagerGenerator.deploy(psRouterAddress, wbnbAddress);
+  const arenaManagerGeneratorAddress = arenaManagerGeneratorContract.address;
+  console.log(`ArenaManager deployed to: ${arenaManagerGeneratorAddress}`);
 }
 
 main()
