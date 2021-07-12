@@ -33,16 +33,18 @@ async function main() {
   const arenaManagerGeneratorAddress = arenaManagerGeneratorContract.address;
   console.log(`ArenaManager deployed to: ${arenaManagerGeneratorAddress}`);
 
-  //const contendorGenerator = await ethers.getContractFactory('Contendor');
+  const contenderGenerator = await ethers.getContractFactory('Contender');
 
-  //const redGeneratorContract = await contendorGenerator.deploy(arenaManagerGeneratorAddress, "VersusRed", "VR");
-  //const blueGeneratorContract = await contendorGenerator.deploy(arenaManagerGeneratorAddress, "VersusBlue", "VB");
+  const redGeneratorContract = await contenderGenerator.deploy(arenaManagerGeneratorAddress, "VersusRed", "VR");
+  const blueGeneratorContract = await contenderGenerator.deploy(arenaManagerGeneratorAddress, "VersusBlue", "VB");
 
-  //const redAddress = redGeneratorContract.address;
-  //const blueAddress = blueGeneratorContract.address;
+  const redAddress = redGeneratorContract.address;
+  const blueAddress = blueGeneratorContract.address;
 
-  //console.log(`Red deployed to: ${redAddress}`);
-  //console.log(`Blue deployed to: ${blueAddress}`);
+  console.log(`Red deployed to: ${redAddress}`);
+  console.log(`Blue deployed to: ${blueAddress}`);
+
+  console.log("Linking ArenaManager to contenders")
 }
 
 main()

@@ -9,6 +9,7 @@ lerna-debug.log*
 
 #vim
 *.swp
+*.swo
 
 #cache
 cache/

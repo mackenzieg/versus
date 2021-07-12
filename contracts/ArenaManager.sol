@@ -297,7 +297,7 @@ contract ArenaManager is Ownable, IArenaManager {
         _blue = blue;
     }
 
-    function changeContendors(address red, address blue) external onlyOwner() {
+    function changeContenders(address red, address blue) external onlyOwner() {
         _red = red;
         _blue = red;
     }
@@ -326,7 +326,7 @@ contract ArenaManager is Ownable, IArenaManager {
         balances[_blue] = queryERC20Balance(_blue, address(this));
     }
 
-    function contendorBuy(uint256 amount) override public {
+    function contenderBuy(uint256 amount) override public {
         require((_msgSender() == _red || _msgSender() == _blue || _msgSender() == owner()), "Can only be called by Red or Blue token contract");
 
         bool isRed = true;
@@ -342,7 +342,7 @@ contract ArenaManager is Ownable, IArenaManager {
         }
     }
 
-    function contendorSell(uint256 amount) override public {
+    function contenderSell(uint256 amount) override public {
         require((_msgSender() == _red || _msgSender() == _blue || _msgSender() == owner()), "Can only be called by Red or Blue token contract");
 
         bool isRed = true;

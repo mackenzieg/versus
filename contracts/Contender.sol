@@ -9,12 +9,7 @@ import "./libraries/Address.sol";
 import "./IArenaManager.sol";
 import "./ArenaManager.sol";
 
-//interface ArenaManager {
-//    function contendorBuy(uint256) external;
-//    function contendorSell(uint256) external;
-//}
-
-contract Contendor is Context, IERC20, Ownable {
+contract Contender is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -192,9 +187,9 @@ contract Contendor is Context, IERC20, Ownable {
         require(amount > 0, "Transfer amount must be greater than zero");
         
         if (sender == _pair && recipient != _arenaManager) {
-            AM.contendorBuy(amount);
+            AM.contenderBuy(amount);
         } else if (sender != _arenaManager && recipient == _pair) {
-            AM.contendorSell(amount);
+            AM.contenderSell(amount);
         }
         
         if (_isExcluded[sender] && !_isExcluded[recipient]) {
