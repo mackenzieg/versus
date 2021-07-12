@@ -28,23 +28,36 @@ async function main() {
   const uniswapV2LockerAddress = uniswapV2LockerContract.address;
   console.log(`Locker deployed to: ${uniswapV2LockerAddress}`);
 
-  const arenaManagerGenerator = await ethers.getContractFactory('ArenaManager');
-  const arenaManagerGeneratorContract = await arenaManagerGenerator.deploy(psRouterAddress, wbnbAddress);
-  const arenaManagerGeneratorAddress = arenaManagerGeneratorContract.address;
-  console.log(`ArenaManager deployed to: ${arenaManagerGeneratorAddress}`);
+  const arenaManager = await ethers.getContractFactory('ArenaManager');
+  const arenaManagerContract = await arenaManager.deploy(psRouterAddress, wbnbAddress);
+  const arenaManagerAddress = arenaManagerContract.address;
+  console.log(`ArenaManager deployed to: ${arenaManagerAddress}`);
 
-  const contenderGenerator = await ethers.getContractFactory('Contender');
+  const contender = await ethers.getContractFactory('Contender');
 
-  const redGeneratorContract = await contenderGenerator.deploy(arenaManagerGeneratorAddress, "VersusRed", "VR");
-  const blueGeneratorContract = await contenderGenerator.deploy(arenaManagerGeneratorAddress, "VersusBlue", "VB");
+  const redContract = await contender.deploy(arenaManagerAddress, "VersusRed", "VR");
+  const blueContract = await contender.deploy(arenaManagerAddress, "VersusBlue", "VB");
 
-  const redAddress = redGeneratorContract.address;
-  const blueAddress = blueGeneratorContract.address;
+  const redAddress = redContract.address;
+  const blueAddress = blueContract.address;
 
   console.log(`Red deployed to: ${redAddress}`);
   console.log(`Blue deployed to: ${blueAddress}`);
 
-  console.log("Linking ArenaManager to contenders")
+  console.log("Linking ArenaManager to contenders");
+  arenaManagerContract.changeContenders(redAddress, blueAddress);
+
+  console.log("Deploying dividend trackers");
+  const dividendTrackerGenerator = await ethers.getContractFactory('ContesterDividendTracker');
+  const redDividendTrackerContract = await dividendTrackerGenerator.deploy("RedDividendTracker", "RDT");
+  const blueDividendTrackerContract = await dividendTrackerGenerator.deploy("BlueDividendTracker", "BDT");
+
+  const redDividendTrackerAddress = redDividendTrackerContract.address;
+  const blueDividendTrackerAddress = blueDividendTrackerContract.address;
+
+  console.log(`Red Dividend Tracker deployed to: ${redAddress}`);
+  console.log(`Blue Dividend Tracker deployed to: ${blueAddress}`);
+
 }
 
 main()

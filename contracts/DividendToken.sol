@@ -1,74 +1,14 @@
 
-pragma solidity 0.6.12;
+pragma solidity 0.7.6;
 
 import "./libraries/TransferHelper.sol";
 import "./libraries/IERC20.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";
+import "./libraries/IterableMapping.sol";
 import "./libraries/Ownable.sol";
 import "./IDividend.sol";
-
-library IterableMapping {
-    // Iterable mapping from address to uint;
-    struct Map {
-        address[] keys;
-        mapping(address => uint) values;
-        mapping(address => uint) indexOf;
-        mapping(address => bool) inserted;
-    }
-
-    function get(Map storage map, address key) public view returns (uint) {
-        return map.values[key];
-    }
-
-    function getIndexOfKey(Map storage map, address key) public view returns (int) {
-        if(!map.inserted[key]) {
-            return -1;
-        }
-        return int(map.indexOf[key]);
-    }
-
-    function getKeyAtIndex(Map storage map, uint index) public view returns (address) {
-        return map.keys[index];
-    }
-
-
-
-    function size(Map storage map) public view returns (uint) {
-        return map.keys.length;
-    }
-
-    function set(Map storage map, address key, uint val) public {
-        if (map.inserted[key]) {
-            map.values[key] = val;
-        } else {
-            map.inserted[key] = true;
-            map.values[key] = val;
-            map.indexOf[key] = map.keys.length;
-            map.keys.push(key);
-        }
-    }
-
-    function remove(Map storage map, address key) public {
-        if (!map.inserted[key]) {
-            return;
-        }
-
-        delete map.inserted[key];
-        delete map.values[key];
-
-        uint index = map.indexOf[key];
-        uint lastIndex = map.keys.length - 1;
-        address lastKey = map.keys[lastIndex];
-
-        map.indexOf[lastKey] = index;
-        delete map.indexOf[key];
-
-        map.keys[index] = lastKey;
-        map.keys.pop();
-    }
-}
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -556,7 +496,7 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
   }
 }
 
-contract ContesterdividendTracker is DividendPayingToken, Ownable {
+contract ContesterDividendTracker is DividendPayingToken, Ownable {
     using SafeMath for uint256;
     using SafeMathInt for int256;
     using IterableMapping for IterableMapping.Map;
@@ -576,7 +516,7 @@ contract ContesterdividendTracker is DividendPayingToken, Ownable {
 
     event Claim(address indexed account, uint256 amount, bool indexed automatic);
 
-    constructor() public DividendPayingToken("Contester_Dividend_Tracker", "Contester_Dividend_Tracker") {
+    constructor(string memory name, string memory symbol) public DividendPayingToken(name, symbol) {
         claimWait = 3600;
         minimumTokenBalanceForDividends = 10 * (10**18); //must hold 10+ tokens
     }

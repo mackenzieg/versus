@@ -1,5 +1,5 @@
 
-pragma solidity 0.6.12;
+pragma solidity 0.7.6;
 
 /// @title Dividend-Paying Token Optional Interface
 /// @author Roger Wu (https://github.com/roger-wu)
