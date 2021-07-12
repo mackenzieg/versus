@@ -4,16 +4,17 @@
 
 // File: @uniswap\lib\contracts\libraries\TransferHelper.sol
 
-pragma solidity >=0.6.0;
+pragma solidity 0.6.12;
 
 import "./libraries/TransferHelper.sol";
 import "./libraries/IERC20.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/Ownable.sol";
+import "./IArenaManager.sol";
 
 // File: contracts\interfaces\IPancakeRouter01.sol
 
-pragma solidity >=0.6.2;
+//pragma solidity >=0.6.2;
 
 interface IPancakeRouter01 {
     function factory() external pure returns (address);
@@ -111,7 +112,7 @@ interface IPancakeRouter01 {
 
 // File: contracts\interfaces\IPancakeRouter02.sol
 
-pragma solidity >=0.6.2;
+//pragma solidity >=0.7.6;
 
 interface IPancakeRouter02 is IPancakeRouter01 {
     function removeLiquidityETHSupportingFeeOnTransferTokens(
@@ -156,7 +157,7 @@ interface IPancakeRouter02 is IPancakeRouter01 {
 
 // File: contracts\interfaces\IPancakeFactory.sol
 
-pragma solidity >=0.5.0;
+//pragma solidity >=0.5.0;
 
 interface IPancakeFactory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
@@ -176,13 +177,9 @@ interface IPancakeFactory {
     function INIT_CODE_PAIR_HASH() external view returns (bytes32);
 }
 
-// File: contracts\libraries\SafeMath.sol
-
-pragma solidity >=0.6.6;
-
 // File: contracts\interfaces\IPancakePair.sol
 
-pragma solidity >=0.5.0;
+//pragma solidity >=0.5.0;
 
 interface IPancakePair {
     event Approval(address indexed owner, address indexed spender, uint value);
@@ -237,7 +234,7 @@ interface IPancakePair {
 
 // File: contracts\interfaces\IWETH.sol
 
-pragma solidity >=0.5.0;
+//pragma solidity >=0.5.0;
 
 interface IWETH {
     function deposit() external payable;
@@ -247,7 +244,7 @@ interface IWETH {
 
 // File: contracts\PancakeRouter.sol
 
-pragma solidity =0.6.12;
+//pragma solidity >=0.6.12;
 
 abstract contract ERC20Interface {
     function balanceOf(address whom) virtual public returns (uint);
@@ -255,9 +252,9 @@ abstract contract ERC20Interface {
     function approve(address spender, uint256 amount) virtual external returns (bool);
 }
 
-contract ArenaManager is Ownable {
-    address private _white = address(0);
-    address private _black = address(0);
+contract ArenaManager is Ownable, IArenaManager {
+    address private _red;
+    address private _blue;
     
     address private _wbnb;
     
@@ -292,12 +289,17 @@ contract ArenaManager is Ownable {
         return ERC20Interface(_tokenAddress).balanceOf(_addressToQuery);
     }
     
-    function changeWhite(address newW) external onlyOwner() {
-        _white = newW;
+    function changeRed(address red) external onlyOwner() {
+        _red = red;
     }
     
-    function changeBlack(address newB) external onlyOwner() {
-        _black = newB;
+    function changeBlue(address blue) external onlyOwner() {
+        _blue = blue;
+    }
+
+    function changeContendors(address red, address blue) external onlyOwner() {
+        _red = red;
+        _blue = red;
     }
     
     
@@ -315,35 +317,46 @@ contract ArenaManager is Ownable {
     }
     
     function updateBalances() private {
-        balances[_white] = queryERC20Balance(_white, address(this));
-        balances[_black] = queryERC20Balance(_black, address(this));
+        balances[_red] = queryERC20Balance(_red, address(this));
+        balances[_blue] = queryERC20Balance(_blue, address(this));
     }
     
     function updateBal() external {
-        balances[_white] = queryERC20Balance(_white, address(this));
-        balances[_black] = queryERC20Balance(_black, address(this));
+        balances[_red] = queryERC20Balance(_red, address(this));
+        balances[_blue] = queryERC20Balance(_blue, address(this));
     }
-    
-    function buyWhite() external {
-        require((_msgSender() == _white || _msgSender() == _black || _msgSender() == owner()), "Can only be called by W or B token contract");
-        buy(_white);
+
+    function contendorBuy(uint256 amount) override public {
+        require((_msgSender() == _red || _msgSender() == _blue || _msgSender() == owner()), "Can only be called by Red or Blue token contract");
+
+        bool isRed = true;
+        if (_msgSender() == _blue){
+          isRed = false;
+        }
+
+        // Need to figure out what the logic should really be
+        if (isRed) {
+          sell(_blue);
+        } else {
+          sell(_red);
+        }
     }
-    
-    function sellWhite() external {
-        require((_msgSender() == _white || _msgSender() == _black || _msgSender() == owner()), "Can only be called by W or B token contract");
-        sell(_white);
+
+    function contendorSell(uint256 amount) override public {
+        require((_msgSender() == _red || _msgSender() == _blue || _msgSender() == owner()), "Can only be called by Red or Blue token contract");
+
+        bool isRed = true;
+        if (_msgSender() == _blue){
+          isRed = false;
+        }
+
+        // Need to figure out what the logic should really be
+        if (isRed) {
+          buy(_blue);
+        } else {
+          buy(_red);
+        }
     }
-    
-    function buyBlack() external {
-        require((_msgSender() == _white || _msgSender() == _black || _msgSender() == owner()), "Can only be called by W or B token contract");
-        buy(_black);
-    }
-    
-    function sellBlack() external {
-        require((_msgSender() == _white || _msgSender() == _black || _msgSender() == owner()), "Can only be called by W or B token contract");
-        sell(_black);
-    }
-    
     
     function buy (address tokenA) private {
         

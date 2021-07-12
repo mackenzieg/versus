@@ -1,20 +1,20 @@
 
-pragma solidity >=0.7.6;
+pragma solidity 0.6.12;
 
 import "./libraries/TransferHelper.sol";
 import "./libraries/IERC20.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/Ownable.sol";
 import "./libraries/Address.sol";
+import "./IArenaManager.sol";
+import "./ArenaManager.sol";
 
-abstract contract Middleman {
-    function sellWhite() virtual external;
-    function buyWhite() virtual external;
-    function sellBlack() virtual external;
-    function buyBlack() virtual external;
-}
+//interface ArenaManager {
+//    function contendorBuy(uint256) external;
+//    function contendorSell(uint256) external;
+//}
 
-contract VersusBlue is Context, IERC20, Ownable {
+contract Contendor is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -31,19 +31,22 @@ contract VersusBlue is Context, IERC20, Ownable {
     uint256 private _tFeeTotal;
     uint256 private _taxAmount = 0;
     
-    address private _middleman;
+    address private _arenaManager;
     
-    Middleman MM;
+    ArenaManager AM;
     
     address private _pair = address(0);
 
-    string private _name = 'VersusBlue';
-    string private _symbol = 'VB';
+    string private _name;
+    string private _symbol;
     uint8 private _decimals = 9;
 
-    constructor (address middleman) {
-        _middleman = middleman;
-        MM = Middleman(middleman);
+    constructor (address payable arenaManager, string memory name, string memory symbol) public {
+        _arenaManager = arenaManager;
+        AM = ArenaManager(arenaManager);
+
+        _name = name;
+        _symbol = symbol;
 
         _rOwned[_msgSender()] = _rTotal;
         emit Transfer(address(0), _msgSender(), _tTotal);
@@ -57,11 +60,11 @@ contract VersusBlue is Context, IERC20, Ownable {
         return _symbol;
     }
 
-    function decimals() public override view returns (uint8) {
+    function decimals() public view override returns (uint8) {
         return _decimals;
     }
 
-    function totalSupply() public pure override returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _tTotal;
     }
 
@@ -144,9 +147,9 @@ contract VersusBlue is Context, IERC20, Ownable {
         _taxAmount = taxVal;
     }
     
-    function changeMiddleman(address newM) external onlyOwner() {
-        _middleman = newM;
-        MM = Middleman(_middleman);
+    function changeArenaManager(address payable arenaManager) external onlyOwner() {
+        _arenaManager = arenaManager;
+        AM = ArenaManager(arenaManager);
     }
     
     function changePair(address newP) external onlyOwner() {
@@ -188,10 +191,10 @@ contract VersusBlue is Context, IERC20, Ownable {
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
         
-        if (sender == _pair && recipient != _middleman) {
-            MM.sellWhite();
-        } else if (sender != _middleman && recipient == _pair) {
-            MM.buyWhite();
+        if (sender == _pair && recipient != _arenaManager) {
+            AM.contendorBuy(amount);
+        } else if (sender != _arenaManager && recipient == _pair) {
+            AM.contendorSell(amount);
         }
         
         if (_isExcluded[sender] && !_isExcluded[recipient]) {
