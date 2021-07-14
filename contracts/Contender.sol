@@ -9,6 +9,24 @@ import "./libraries/Address.sol";
 import "./IArenaManager.sol";
 import "./ArenaManager.sol";
 
+interface IDividendPayingToken {
+  function withdrawableDividendOf(address _owner) external view returns(uint256);
+  function withdrawnDividendOf(address _owner) external view returns(uint256);
+  function accumulativeDividendOf(address _owner) external view returns(uint256);
+
+  function dividendOf(address _owner) external view returns(uint256);
+  function distributeDividends() external payable;
+  function withdrawDividend() external;
+  event DividendsDistributed(
+    address indexed from,
+    uint256 weiAmount
+  );
+  event DividendWithdrawn(
+    address indexed to,
+    uint256 weiAmount
+  );
+}
+
 contract Contender is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
@@ -27,6 +45,7 @@ contract Contender is Context, IERC20, Ownable {
     uint256 private _taxAmount = 0;
     
     address private _arenaManager;
+    IDividendPayingToken private _dividendTracker;
     
     ArenaManager AM;
     
@@ -36,9 +55,10 @@ contract Contender is Context, IERC20, Ownable {
     string private _symbol;
     uint8 private _decimals = 9;
 
-    constructor (address payable arenaManager, string memory name, string memory symbol) public {
+    constructor (address payable arenaManager, address payable dividendTracker, string memory name, string memory symbol) public {
         _arenaManager = arenaManager;
         AM = ArenaManager(arenaManager);
+        _dividendTracker = IDividendPayingToken(dividendTracker);
 
         _name = name;
         _symbol = symbol;

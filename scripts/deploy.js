@@ -33,20 +33,6 @@ async function main() {
   const arenaManagerAddress = arenaManagerContract.address;
   console.log(`ArenaManager deployed to: ${arenaManagerAddress}`);
 
-  const contender = await ethers.getContractFactory('Contender');
-
-  const redContract = await contender.deploy(arenaManagerAddress, "VersusRed", "VR");
-  const blueContract = await contender.deploy(arenaManagerAddress, "VersusBlue", "VB");
-
-  const redAddress = redContract.address;
-  const blueAddress = blueContract.address;
-
-  console.log(`Red deployed to: ${redAddress}`);
-  console.log(`Blue deployed to: ${blueAddress}`);
-
-  console.log("Linking ArenaManager to contenders");
-  arenaManagerContract.changeContenders(redAddress, blueAddress);
-
   const iterableMapping = await ethers.getContractFactory('IterableMapping');
   const iterableMappingContract = await iterableMapping.deploy();
   const iterableMappingAddress = iterableMappingContract.address;
@@ -61,11 +47,27 @@ async function main() {
   const redDividendTrackerContract = await dividendTrackerGenerator.deploy("RedDividendTracker", "RDT");
   const blueDividendTrackerContract = await dividendTrackerGenerator.deploy("BlueDividendTracker", "BDT");
 
+
   const redDividendTrackerAddress = redDividendTrackerContract.address;
   const blueDividendTrackerAddress = blueDividendTrackerContract.address;
 
-  console.log(`Red Dividend Tracker deployed to: ${redAddress}`);
-  console.log(`Blue Dividend Tracker deployed to: ${blueAddress}`);
+  console.log(`Red Dividend Tracker deployed to: ${redDividendTrackerAddress}`);
+  console.log(`Blue Dividend Tracker deployed to: ${blueDividendTrackerAddress}`);
+
+  const contender = await ethers.getContractFactory('Contender');
+
+  const redContract = await contender.deploy(arenaManagerAddress, redDividendTrackerAddress, "VersusRed", "VR");
+  const blueContract = await contender.deploy(arenaManagerAddress, blueDividendTrackerAddress, "VersusBlue", "VB");
+
+  const redAddress = redContract.address;
+  const blueAddress = blueContract.address;
+
+  console.log(`Red deployed to: ${redAddress}`);
+  console.log(`Blue deployed to: ${blueAddress}`);
+
+
+  console.log("Linking ArenaManager to contenders");
+  arenaManagerContract.changeContenders(redAddress, blueAddress);
 }
 
 main()
