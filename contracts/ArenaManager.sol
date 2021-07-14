@@ -253,6 +253,19 @@ abstract contract ERC20Interface {
 }
 
 contract ArenaManager is Ownable, IArenaManager {
+    struct ArenaManagerStatus {
+      uint256 nextCompetitionEndTime;
+      uint256 nextGiveawayEndTime; 
+
+      uint256 lastCompetitionEndTime;
+
+      bool arenaManagerEnabled;
+      
+      bool giveawayEnabled;
+      uint256 COMPETITION_TIME;
+      uint256 GIVEAWAY_TIME;
+    }
+
     address private _red;
     address private _blue;
     
@@ -267,10 +280,51 @@ contract ArenaManager is Ownable, IArenaManager {
     string private _name = 'ArenaManager';
     string private _symbol = 'ARENAM';
 
+    ArenaManagerStatus private STATUS;
+
     constructor (address payable psRouter, address payable wbnb) public {
       router = psRouter;
       _pr = IPancakeRouter02(psRouter);
       _wbnb = wbnb;
+
+
+      // Timestamp really far out
+      uint256 YEAR3000 = 32520475068;
+      
+      STATUS.nextCompetitionEndTime = YEAR3000;
+      STATUS.nextGiveawayEndTime = YEAR3000; 
+
+      STATUS.arenaManagerEnabled = false;
+
+      STATUS.giveawayEnabled = false;
+      STATUS.COMPETITION_TIME = 3 days;
+      STATUS.GIVEAWAY_TIME = 1 hours;
+    }
+
+    function setCurrentCompetitionEndTime(uint256 competitionTime) external onlyOwner() {
+      STATUS.nextCompetitionEndTime = competitionTime;
+    }
+
+    function setCurrentGiveawayEndTime(uint256 giveawayTime) external onlyOwner() {
+      STATUS.nextGiveawayEndTime = giveawayTime;
+    }
+
+    function setCompeitionTimingLimits(uint256 competitionTime, uint256 giveawayTime) external onlyOwner() {
+      STATUS.COMPETITION_TIME = competitionTime;
+      STATUS.GIVEAWAY_TIME = giveawayTime;
+    }
+
+    function currentState() public returns (uint32) {
+      if (!STATUS.giveawayEnabled) {
+        // Giveaway disabled
+        return 0;
+      } else if (block.timestamp < STATUS.nextGiveawayEndTime) {
+        // Currently in competition mode 
+        return 1;
+      } else {
+        // Currently in giveaway mode
+        return 2;
+      }
     }
 
     function name() public view returns (string memory) {
@@ -326,8 +380,26 @@ contract ArenaManager is Ownable, IArenaManager {
         balances[_blue] = queryERC20Balance(_blue, address(this));
     }
 
+    function updateState() private {
+        uint32 state = currentState();
+        uint256 currTime = block.timestamp;
+        if (state == 1 && currTime >= STATUS.nextCompetitionEndTime) {
+          // Store last competition time so period between competition is always GIVEAWAY_TIME
+          STATUS.lastCompetitionEndTime = STATUS.nextCompetitionEndTime;
+          
+          // Update end of giveaway time
+          // Edge case here, use currTime instead of lastCompetitionEndTime as if the last transfer happens after giveaway
+          // time it would skip giveaway time
+          STATUS.nextGiveawayEndTime = currTime + STATUS.GIVEAWAY_TIME;
+        } else if (state == 2 && currTime >= STATUS.nextGiveawayEndTime) {
+          // Update end of next competition time
+          STATUS.nextCompetitionEndTime = STATUS.lastCompetitionEndTime + STATUS.GIVEAWAY_TIME;
+        }
+    }
+
     function contenderBuy(uint256 amount) override public {
         require((_msgSender() == _red || _msgSender() == _blue || _msgSender() == owner()), "Can only be called by Red or Blue token contract");
+
 
         bool isRed = true;
         if (_msgSender() == _blue){
