@@ -47,6 +47,17 @@ async function main() {
   console.log("Linking ArenaManager to contenders");
   arenaManagerContract.changeContenders(redAddress, blueAddress);
 
+  console.log("Deploying dividend trackers");
+  const dividendTrackerGenerator = await ethers.getContractFactory('ContesterDividendTracker');
+  const redDividendTrackerContract = await dividendTrackerGenerator.deploy("RedDividendTracker", "RDT");
+  const blueDividendTrackerContract = await dividendTrackerGenerator.deploy("BlueDividendTracker", "BDT");
+
+  const redDividendTrackerAddress = redDividendTrackerContract.address;
+  const blueDividendTrackerAddress = blueDividendTrackerContract.address;
+
+  console.log(`Red Dividend Tracker deployed to: ${redAddress}`);
+  console.log(`Blue Dividend Tracker deployed to: ${blueAddress}`);
+
 }
 
 main()
