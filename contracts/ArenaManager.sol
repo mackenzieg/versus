@@ -397,8 +397,21 @@ contract ArenaManager is Ownable, IArenaManager {
         }
     }
 
+    function executeBasedOnState() private {
+        uint32 state = currentState();
+
+        if (state == 2) {
+          // Check who is winning and send out giveaway here 
+        }
+    }
+
+    // TODO to reduce repeat code consider just passing if its a buy or sell as a bool into a single function
     function contenderBuy(uint256 amount) override public {
         require((_msgSender() == _red || _msgSender() == _blue || _msgSender() == owner()), "Can only be called by Red or Blue token contract");
+
+        updateState();
+
+        executeBasedOnState();
 
 
         bool isRed = true;
