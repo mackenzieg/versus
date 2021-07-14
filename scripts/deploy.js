@@ -47,8 +47,17 @@ async function main() {
   console.log("Linking ArenaManager to contenders");
   arenaManagerContract.changeContenders(redAddress, blueAddress);
 
+  const iterableMapping = await ethers.getContractFactory('IterableMapping');
+  const iterableMappingContract = await iterableMapping.deploy();
+  const iterableMappingAddress = iterableMappingContract.address;
+
   console.log("Deploying dividend trackers");
-  const dividendTrackerGenerator = await ethers.getContractFactory('ContesterDividendTracker');
+  const dividendTrackerGenerator = await ethers.getContractFactory('ContesterDividendTracker', {
+        libraries: {
+          IterableMapping: iterableMappingAddress
+        }
+      });
+
   const redDividendTrackerContract = await dividendTrackerGenerator.deploy("RedDividendTracker", "RDT");
   const blueDividendTrackerContract = await dividendTrackerGenerator.deploy("BlueDividendTracker", "BDT");
 
@@ -57,7 +66,6 @@ async function main() {
 
   console.log(`Red Dividend Tracker deployed to: ${redAddress}`);
   console.log(`Blue Dividend Tracker deployed to: ${blueAddress}`);
-
 }
 
 main()

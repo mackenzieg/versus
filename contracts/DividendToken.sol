@@ -3,12 +3,8 @@ pragma solidity 0.7.6;
 
 import "./libraries/TransferHelper.sol";
 import "./libraries/IERC20.sol";
-import "./libraries/SafeMath.sol";
-import "./libraries/SafeMathInt.sol";
-import "./libraries/SafeMathUint.sol";
-import "./libraries/IterableMapping.sol";
 import "./libraries/Ownable.sol";
-import "./IDividend.sol";
+import "./libraries/IterableMapping.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -309,6 +305,320 @@ contract ERC20 is Context, IERC20 {
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 }
 
+/// @title Dividend-Paying Token Optional Interface
+/// @author Roger Wu (https://github.com/roger-wu)
+/// @dev OPTIONAL functions for a dividend-paying token contract.
+interface IDividendPayingTokenOptional {
+  /// @notice View the amount of dividend in wei that an address can withdraw.
+  /// @param _owner The address of a token holder.
+  /// @return The amount of dividend in wei that `_owner` can withdraw.
+  function withdrawableDividendOf(address _owner) external view returns(uint256);
+
+  /// @notice View the amount of dividend in wei that an address has withdrawn.
+  /// @param _owner The address of a token holder.
+  /// @return The amount of dividend in wei that `_owner` has withdrawn.
+  function withdrawnDividendOf(address _owner) external view returns(uint256);
+
+  /// @notice View the amount of dividend in wei that an address has earned in total.
+  /// @dev accumulativeDividendOf(_owner) = withdrawableDividendOf(_owner) + withdrawnDividendOf(_owner)
+  /// @param _owner The address of a token holder.
+  /// @return The amount of dividend in wei that `_owner` has earned in total.
+  function accumulativeDividendOf(address _owner) external view returns(uint256);
+}
+
+/// @title Dividend-Paying Token Interface
+/// @author Roger Wu (https://github.com/roger-wu)
+/// @dev An interface for a dividend-paying token contract.
+interface IDividendPayingToken {
+  /// @notice View the amount of dividend in wei that an address can withdraw.
+  /// @param _owner The address of a token holder.
+  /// @return The amount of dividend in wei that `_owner` can withdraw.
+  function dividendOf(address _owner) external view returns(uint256);
+
+  /// @notice Distributes ether to token holders as dividends.
+  /// @dev SHOULD distribute the paid ether to token holders as dividends.
+  ///  SHOULD NOT directly transfer ether to token holders in this function.
+  ///  MUST emit a `DividendsDistributed` event when the amount of distributed ether is greater than 0.
+  function distributeDividends() external payable;
+
+  /// @notice Withdraws the ether distributed to the sender.
+  /// @dev SHOULD transfer `dividendOf(msg.sender)` wei to `msg.sender`, and `dividendOf(msg.sender)` SHOULD be 0 after the transfer.
+  ///  MUST emit a `DividendWithdrawn` event if the amount of ether transferred is greater than 0.
+  function withdrawDividend() external;
+
+  /// @dev This event MUST emit when ether is distributed to token holders.
+  /// @param from The address which sends ether to this contract.
+  /// @param weiAmount The amount of distributed ether in wei.
+  event DividendsDistributed(
+    address indexed from,
+    uint256 weiAmount
+  );
+
+  /// @dev This event MUST emit when an address withdraws their dividend.
+  /// @param to The address which withdraws ether from this contract.
+  /// @param weiAmount The amount of withdrawn ether in wei.
+  event DividendWithdrawn(
+    address indexed to,
+    uint256 weiAmount
+  );
+}
+
+/**
+ * @title SafeMathInt
+ * @dev Math operations with safety checks that revert on error
+ * @dev SafeMath adapted for int256
+ * Based on code of  https://github.com/RequestNetwork/requestNetwork/blob/master/packages/requestNetworkSmartContracts/contracts/base/math/SafeMathInt.sol
+ */
+library SafeMathInt {
+  function mul(int256 a, int256 b) internal pure returns (int256) {
+    // Prevent overflow when multiplying INT256_MIN with -1
+    // https://github.com/RequestNetwork/requestNetwork/issues/43
+    require(!(a == - 2**255 && b == -1) && !(b == - 2**255 && a == -1));
+
+    int256 c = a * b;
+    require((b == 0) || (c / b == a));
+    return c;
+  }
+
+  function div(int256 a, int256 b) internal pure returns (int256) {
+    // Prevent overflow when dividing INT256_MIN by -1
+    // https://github.com/RequestNetwork/requestNetwork/issues/43
+    require(!(a == - 2**255 && b == -1) && (b > 0));
+
+    return a / b;
+  }
+
+  function sub(int256 a, int256 b) internal pure returns (int256) {
+    require((b >= 0 && a - b <= a) || (b < 0 && a - b > a));
+
+    return a - b;
+  }
+
+  function add(int256 a, int256 b) internal pure returns (int256) {
+    int256 c = a + b;
+    require((b >= 0 && c >= a) || (b < 0 && c < a));
+    return c;
+  }
+
+  function toUint256Safe(int256 a) internal pure returns (uint256) {
+    require(a >= 0);
+    return uint256(a);
+  }
+}
+// File: contracts/SafeMathUint.sol
+
+pragma solidity ^0.7.6;
+
+/**
+ * @title SafeMathUint
+ * @dev Math operations with safety checks that revert on error
+ */
+library SafeMathUint {
+  function toInt256Safe(uint256 a) internal pure returns (int256) {
+    int256 b = int256(a);
+    require(b >= 0);
+    return b;
+  }
+}
+
+library SafeMath {
+    /**
+     * @dev Returns the addition of two unsigned integers, with an overflow flag.
+     *
+     * _Available since v3.4._
+     */
+    function tryAdd(uint256 a, uint256 b) internal pure returns (bool, uint256) {
+        uint256 c = a + b;
+        if (c < a) return (false, 0);
+        return (true, c);
+    }
+
+    /**
+     * @dev Returns the substraction of two unsigned integers, with an overflow flag.
+     *
+     * _Available since v3.4._
+     */
+    function trySub(uint256 a, uint256 b) internal pure returns (bool, uint256) {
+        if (b > a) return (false, 0);
+        return (true, a - b);
+    }
+
+    /**
+     * @dev Returns the multiplication of two unsigned integers, with an overflow flag.
+     *
+     * _Available since v3.4._
+     */
+    function tryMul(uint256 a, uint256 b) internal pure returns (bool, uint256) {
+        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
+        // benefit is lost if 'b' is also tested.
+        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
+        if (a == 0) return (true, 0);
+        uint256 c = a * b;
+        if (c / a != b) return (false, 0);
+        return (true, c);
+    }
+
+    /**
+     * @dev Returns the division of two unsigned integers, with a division by zero flag.
+     *
+     * _Available since v3.4._
+     */
+    function tryDiv(uint256 a, uint256 b) internal pure returns (bool, uint256) {
+        if (b == 0) return (false, 0);
+        return (true, a / b);
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers, with a division by zero flag.
+     *
+     * _Available since v3.4._
+     */
+    function tryMod(uint256 a, uint256 b) internal pure returns (bool, uint256) {
+        if (b == 0) return (false, 0);
+        return (true, a % b);
+    }
+
+    /**
+     * @dev Returns the addition of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `+` operator.
+     *
+     * Requirements:
+     *
+     * - Addition cannot overflow.
+     */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+        return c;
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b <= a, "SafeMath: subtraction overflow");
+        return a - b;
+    }
+
+    /**
+     * @dev Returns the multiplication of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `*` operator.
+     *
+     * Requirements:
+     *
+     * - Multiplication cannot overflow.
+     */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0) return 0;
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+        return c;
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers, reverting on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b > 0, "SafeMath: division by zero");
+        return a / b;
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * reverting when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b > 0, "SafeMath: modulo by zero");
+        return a % b;
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on
+     * overflow (when the result is negative).
+     *
+     * CAUTION: This function is deprecated because it requires allocating memory for the error
+     * message unnecessarily. For custom revert reasons use {trySub}.
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
+    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b <= a, errorMessage);
+        return a - b;
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers, reverting with custom message on
+     * division by zero. The result is rounded towards zero.
+     *
+     * CAUTION: This function is deprecated because it requires allocating memory for the error
+     * message unnecessarily. For custom revert reasons use {tryDiv}.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b > 0, errorMessage);
+        return a / b;
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * reverting with custom message when dividing by zero.
+     *
+     * CAUTION: This function is deprecated because it requires allocating memory for the error
+     * message unnecessarily. For custom revert reasons use {tryMod}.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b > 0, errorMessage);
+        return a % b;
+    }
+}
+
 contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingTokenOptional {
   using SafeMath for uint256;
   using SafeMathUint for uint256;
@@ -534,7 +844,8 @@ contract ContesterDividendTracker is DividendPayingToken, Ownable {
     	excludedFromDividends[account] = true;
 
     	_setBalance(account, 0);
-    	tokenHoldersMap.remove(account);
+      IterableMapping.remove(tokenHoldersMap, account);
+    	//tokenHoldersMap.remove(account);
 
     	emit ExcludeFromDividends(account);
     }
@@ -566,7 +877,7 @@ contract ContesterDividendTracker is DividendPayingToken, Ownable {
             uint256 secondsUntilAutoClaimAvailable) {
         account = _account;
 
-        index = tokenHoldersMap.getIndexOfKey(account);
+        index = IterableMapping.getIndexOfKey(tokenHoldersMap, account);
 
         iterationsUntilProcessed = -1;
 
@@ -609,11 +920,11 @@ contract ContesterDividendTracker is DividendPayingToken, Ownable {
             uint256,
             uint256,
             uint256) {
-    	if(index >= tokenHoldersMap.size()) {
+    	if(index >= IterableMapping.size(tokenHoldersMap)) {
             return (0x0000000000000000000000000000000000000000, -1, -1, 0, 0, 0, 0, 0);
         }
 
-        address account = tokenHoldersMap.getKeyAtIndex(index);
+        address account = IterableMapping.getKeyAtIndex(tokenHoldersMap, index);
 
         return getAccount(account);
     }
@@ -632,12 +943,12 @@ contract ContesterDividendTracker is DividendPayingToken, Ownable {
     	}
 
     	if(newBalance >= minimumTokenBalanceForDividends) {
-            _setBalance(account, newBalance);
-    		tokenHoldersMap.set(account, newBalance);
+        _setBalance(account, newBalance);
+        IterableMapping.set(tokenHoldersMap, account, newBalance);
     	}
     	else {
-            _setBalance(account, 0);
-    		tokenHoldersMap.remove(account);
+        _setBalance(account, 0);
+        IterableMapping.remove(tokenHoldersMap, account);
     	}
 
     	processAccount(account, true);
