@@ -5,8 +5,9 @@ import "./libraries/IERC20.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/Ownable.sol";
 import "./libraries/Address.sol";
+import "./libraries/IPancake.sol";
 import "./IArenaManager.sol";
-import "./ArenaManager.sol";
+//import "./ArenaManager.sol";
 
 interface IDividendPayingToken {
   function withdrawableDividendOf(address _owner) external view returns(uint256);
@@ -24,146 +25,6 @@ interface IDividendPayingToken {
     address indexed to,
     uint256 weiAmount
   );
-}
-
-
-pragma solidity >=0.6.2;
-
-interface IPancakeRouter01 {
-    function factory() external pure returns (address);
-    function WETH() external pure returns (address);
-
-    function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint amountADesired,
-        uint amountBDesired,
-        uint amountAMin,
-        uint amountBMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountA, uint amountB, uint liquidity);
-    function addLiquidityETH(
-        address token,
-        uint amountTokenDesired,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
-    function removeLiquidity(
-        address tokenA,
-        address tokenB,
-        uint liquidity,
-        uint amountAMin,
-        uint amountBMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountA, uint amountB);
-    function removeLiquidityETH(
-        address token,
-        uint liquidity,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountToken, uint amountETH);
-    function removeLiquidityWithPermit(
-        address tokenA,
-        address tokenB,
-        uint liquidity,
-        uint amountAMin,
-        uint amountBMin,
-        address to,
-        uint deadline,
-        bool approveMax, uint8 v, bytes32 r, bytes32 s
-    ) external returns (uint amountA, uint amountB);
-    function removeLiquidityETHWithPermit(
-        address token,
-        uint liquidity,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline,
-        bool approveMax, uint8 v, bytes32 r, bytes32 s
-    ) external returns (uint amountToken, uint amountETH);
-    function swapExactTokensForTokens(
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external returns (uint[] memory amounts);
-    function swapTokensForExactTokens(
-        uint amountOut,
-        uint amountInMax,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external returns (uint[] memory amounts);
-    function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
-        external
-        payable
-        returns (uint[] memory amounts);
-    function swapTokensForExactETH(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline)
-        external
-        returns (uint[] memory amounts);
-    function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
-        external
-        returns (uint[] memory amounts);
-    function swapETHForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline)
-        external
-        payable
-        returns (uint[] memory amounts);
-
-    function quote(uint amountA, uint reserveA, uint reserveB) external pure returns (uint amountB);
-    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) external pure returns (uint amountOut);
-    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) external pure returns (uint amountIn);
-    function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
-    function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
-}
-
-pragma solidity >=0.6.2;
-
-interface IPancakeRouter02 is IPancakeRouter01 {
-    function removeLiquidityETHSupportingFeeOnTransferTokens(
-        address token,
-        uint liquidity,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountETH);
-    function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
-        address token,
-        uint liquidity,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline,
-        bool approveMax, uint8 v, bytes32 r, bytes32 s
-    ) external returns (uint amountETH);
-
-    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external;
-    function swapExactETHForTokensSupportingFeeOnTransferTokens(
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external payable;
-    function swapExactTokensForETHSupportingFeeOnTransferTokens(
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external;
 }
 
 contract Contender is Context, IERC20, Ownable {
@@ -192,7 +53,7 @@ contract Contender is Context, IERC20, Ownable {
     address payable private _arenaManager;
     IDividendPayingToken private _dividendTracker;
     
-    ArenaManager AM;
+    IArenaManager AM;
     
     address private _pair = address(0);
     address private _router = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
@@ -214,7 +75,7 @@ contract Contender is Context, IERC20, Ownable {
 
     constructor (address payable arenaManager, address payable dividendTracker, string memory name, string memory symbol) public {
         _arenaManager = arenaManager;
-        AM = ArenaManager(arenaManager);
+        AM = IArenaManager(arenaManager);
         _dividendTracker = IDividendPayingToken(dividendTracker);
 
         _name = name;
@@ -233,11 +94,10 @@ contract Contender is Context, IERC20, Ownable {
         _excluded[addr] = false;
     }
 
-    function changeTaxShares(uint256 pp, uint256 marketing, uint256 lp, uint256 am) external onlyOwner() {
-        _prizePoolShareDiv = pp; 
-        _marketingShareDiv = marketing;
-        _lpShareDiv = lp;
-        _amShareDiv = am;
+    function changeTaxShares(uint256 pp, uint256 lp, uint256 am) external onlyOwner() {
+        _prizePoolShare = pp; 
+        _lpShare = lp;
+        _amShare = am;
     }
     
     function changeTax(uint256 taxVal) external onlyOwner() {
@@ -247,7 +107,7 @@ contract Contender is Context, IERC20, Ownable {
     
     function changeArenaManager(address payable arenaManager) external onlyOwner() {
         _arenaManager = arenaManager;
-        AM = ArenaManager(arenaManager);
+        AM = IArenaManager(arenaManager);
     }
 
     function changeMinTokensForSwap(uint256 newMin) external onlyOwner() {
@@ -297,10 +157,10 @@ contract Contender is Context, IERC20, Ownable {
 
         //@dev sell tokens for BNB
                 
-        routerInterface.swapExactTokensForETHSupportingFeeOnTransferTokens(
+        _routerInterface.swapExactTokensForETHSupportingFeeOnTransferTokens(
         tokensToSell,
         0,
-        _path,
+        _wbnbPath,
         address(this),
         block.timestamp
         );
@@ -311,7 +171,7 @@ contract Contender is Context, IERC20, Ownable {
 
         uint256 bnbForLP = bnbBalance.mul(_lpShare).div(10000);
 
-        routerInterface.addLiquidityETH{value: bnbForLP}(
+        _routerInterface.addLiquidityETH{value: bnbForLP}(
         address(this),
         tokensForLP,
         0,
@@ -353,7 +213,7 @@ contract Contender is Context, IERC20, Ownable {
         require(amount > 0, "Transfer amount must be greater than zero");
         
 
-        if (_taxOn && !_exclude[sender] && !_excluded[recipient] && (sender == _pair || recipient == _pair)) {
+        if (_taxOn && !_excluded[sender] && !_excluded[recipient] && (sender == _pair || recipient == _pair)) {
             uint256 fee = amount.div(100).mul(_taxAmount);
 
             _balances[address(this)] = _balances[address(this)].add(fee);
@@ -383,7 +243,7 @@ contract Contender is Context, IERC20, Ownable {
 
     //@dev standard ERC20 funcs
 
-    function totalSupply() pure external override returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _total;
     }
 
@@ -419,7 +279,7 @@ contract Contender is Context, IERC20, Ownable {
         return _symbol;
     }
 
-    function decimals() public view returns (uint8) {
+    function decimals() public view override returns (uint8) {
         return _decimals;
     }
 
