@@ -230,8 +230,8 @@ contract ArenaManager is Ownable, IArenaManager {
 
       address[] memory path = new address[](2);
 
-      path[0] = _wbnb;
-      path[1] = tokenA;
+      path[0] = tokenA;
+      path[1] = _wbnb;
 
       uint[] memory amounts = _pr.getAmountsOut(amount, path);
 
