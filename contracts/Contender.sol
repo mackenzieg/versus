@@ -12,6 +12,7 @@ import "./IArenaManager.sol";
 interface IDividendPayingToken {
   function setBalance(address payable account, uint256 newBalance) external;
   function process(uint256 gas) external returns (uint256, uint256, uint256);
+  function excludeFromDividends(address account) external;
 
   function withdrawableDividendOf(address _owner) external view returns(uint256);
   function withdrawnDividendOf(address _owner) external view returns(uint256);
@@ -77,12 +78,12 @@ contract Contender is Context, IERC20, Ownable {
     uint8 private _decimals = 9;
 
     event ProcessedDividendTracker(
-    	uint256 iterations,
-    	uint256 claims,
+        uint256 iterations,
+        uint256 claims,
         uint256 lastProcessedIndex,
-    	bool indexed automatic,
-    	uint256 gas,
-    	address indexed processor
+        bool indexed automatic,
+        uint256 gas,
+        address indexed processor
     );
 
     constructor (address payable arenaManager, address payable dividendTracker, address router, address wbnb, address busd,
@@ -101,7 +102,10 @@ contract Contender is Context, IERC20, Ownable {
 
         _balances[_msgSender()] = _total;
         emit Transfer(address(0), _msgSender(), _total);
-
+        
+        _dividendTracker.excludeFromDividends(_arenaManager);
+        _dividendTracker.excludeFromDividends(router);
+        _dividendTracker.excludeFromDividends(0x000000000000000000000000000000000000dead);
     }
 
     function addExcluded(address addr) external onlyOwner() {
@@ -126,6 +130,8 @@ contract Contender is Context, IERC20, Ownable {
     function changeArenaManager(address payable arenaManager) external onlyOwner() {
         _arenaManager = arenaManager;
         AM = IArenaManager(arenaManager);
+
+        _dividendTracker.excludeFromDividends(arenaManager);
     }
 
     function changeMinTokensForSwap(uint256 newMin) external onlyOwner() {
