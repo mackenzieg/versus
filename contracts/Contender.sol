@@ -56,9 +56,9 @@ contract Contender is Context, IERC20, Ownable {
     IArenaManager AM;
     
     address private _pair = address(0);
-    address private _router = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
-    address private _wbnb = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    address private _busd = 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56;
+    address private _router;
+    address private _wbnb;
+    address private _busd;
 
     IPancakeRouter02 _routerInterface = IPancakeRouter02(_router);
 
@@ -73,8 +73,14 @@ contract Contender is Context, IERC20, Ownable {
     string private _symbol;
     uint8 private _decimals = 9;
 
-    constructor (address payable arenaManager, address payable dividendTracker, string memory name, string memory symbol) public {
+    constructor (address payable arenaManager, address payable dividendTracker, address router, address wbnb, address busd,
+        string memory name, string memory symbol) public {
         _arenaManager = arenaManager;
+
+        _router = router;
+        _wbnb = wbnb;
+        _busd = busd;
+
         AM = IArenaManager(arenaManager);
         _dividendTracker = IDividendPayingToken(dividendTracker);
 

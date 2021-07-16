@@ -11,6 +11,11 @@ async function main() {
   const wbnbContract = await WBNB.deploy();
   const wbnbAddress = wbnbContract.address;
   console.log("WBNB deployed to:", wbnbAddress);
+
+  const BUSD = await hre.ethers.getContractFactory("BUSD");
+  const busdContract = await BUSD.deploy();
+  const busdAddress = busdContract.address;
+  console.log("BUSD deployed to:", busdAddress);
   
   const psFactory = await hre.ethers.getContractFactory("PancakeFactory");
   const psFactoryContract = await psFactory.deploy(accounts[0].address);
@@ -29,7 +34,7 @@ async function main() {
   console.log(`Locker deployed to: ${uniswapV2LockerAddress}`);
 
   const arenaManager = await ethers.getContractFactory('ArenaManager');
-  const arenaManagerContract = await arenaManager.deploy(psRouterAddress, wbnbAddress);
+  const arenaManagerContract = await arenaManager.deploy(psRouterAddress, wbnbAddress, busdAddress);
   const arenaManagerAddress = arenaManagerContract.address;
   console.log(`ArenaManager deployed to: ${arenaManagerAddress}`);
 
@@ -47,7 +52,6 @@ async function main() {
   const redDividendTrackerContract = await dividendTrackerGenerator.deploy("RedDividendTracker", "RDT");
   const blueDividendTrackerContract = await dividendTrackerGenerator.deploy("BlueDividendTracker", "BDT");
 
-
   const redDividendTrackerAddress = redDividendTrackerContract.address;
   const blueDividendTrackerAddress = blueDividendTrackerContract.address;
 
@@ -56,8 +60,8 @@ async function main() {
 
   const contender = await ethers.getContractFactory('Contender');
 
-  const redContract = await contender.deploy(arenaManagerAddress, redDividendTrackerAddress, "VersusRed", "VR");
-  const blueContract = await contender.deploy(arenaManagerAddress, blueDividendTrackerAddress, "VersusBlue", "VB");
+  const redContract = await contender.deploy(arenaManagerAddress, redDividendTrackerAddress, psRouterAddress, wbnbAddress, busdAddress, "VersusRed", "VR");
+  const blueContract = await contender.deploy(arenaManagerAddress, blueDividendTrackerAddress, psRouterAddress, wbnbAddress, busdAddress, "VersusBlue", "VB");
 
   const redAddress = redContract.address;
   const blueAddress = blueContract.address;

@@ -11,22 +11,8 @@ import "./libraries/IERC20.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/Ownable.sol";
 import "./libraries/IPancake.sol";
+import "./BUSD.sol";
 import "./IArenaManager.sol";
-
-
-// File: contracts\interfaces\IWETH.sol
-
-//pragma solidity >=0.5.0;
-
-interface IWETH {
-    function deposit() external payable;
-    function transfer(address to, uint value) external returns (bool);
-    function withdraw(uint) external;
-}
-
-// File: contracts\PancakeRouter.sol
-
-//pragma solidity >=0.6.12;
 
 abstract contract ERC20Interface {
     function balanceOf(address whom) virtual public returns (uint);
@@ -52,6 +38,7 @@ contract ArenaManager is Ownable, IArenaManager {
     address private _blue;
     
     address private _wbnb;
+    address private _busd;
     
     address payable private router;
     
@@ -64,11 +51,11 @@ contract ArenaManager is Ownable, IArenaManager {
 
     ArenaManagerStatus private STATUS;
 
-    constructor (address payable psRouter, address payable wbnb) public {
+    constructor (address payable psRouter, address payable wbnb, address payable busd) public {
       router = psRouter;
       _pr = IPancakeRouter02(psRouter);
       _wbnb = wbnb;
-
+      _busd = busd;
 
       // Timestamp really far out
       uint256 YEAR3000 = 32520475068;
