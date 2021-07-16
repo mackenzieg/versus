@@ -204,9 +204,9 @@ contract ArenaManager is Ownable, IArenaManager {
 
         // Need to figure out what the logic should really be
         if (isRed) {
-          sell(_blue);
+          sell(_blue, amount);
         } else {
-          sell(_red);
+          sell(_red, amount);
         }
     }
 
@@ -220,17 +220,35 @@ contract ArenaManager is Ownable, IArenaManager {
 
         // Need to figure out what the logic should really be
         if (isRed) {
-          buy(_blue);
+          buy(_blue, amount);
         } else {
-          buy(_red);
+          buy(_red, amount);
         }
     }
+
+    function tokenToBNB(address tokenA, uint256 amount) private  returns (uint256){
+
+      address[] memory path = new address[](2);
+
+      path[0] = tokenA;
+      path[1] = _wbnb;
+
+      uint[] memory amounts = _pr.getAmountsOut(amount, path);
+
+      return amounts[1];
+    }
     
-    function buy (address tokenA) private {
+    function buy (address tokenA, uint256 amount) private {
         address[] memory path = new address[](2);
         
         uint256 bnbAmount = address(this).balance;
         bnbAmount = SafeMath.div(bnbAmount, 100);
+
+        uint256 bnbPrice = tokenToBNB(tokenA, amount);
+
+        if (bnbPrice <= bnbAmount) {
+          bnbAmount = bnbPrice;
+        }
         
         path[0] = _wbnb;
         path[1] = tokenA;
@@ -245,13 +263,19 @@ contract ArenaManager is Ownable, IArenaManager {
         
     }
     
-    function sell (address tokenA) private {
+    function sell (address tokenA, uint256 amount) private {
         updateBalances();
         
         address[] memory path = new address[](2);
         
         uint tokenAmount = balances[tokenA];
+
         tokenAmount = SafeMath.div(tokenAmount, 100);
+
+        if (amount <= tokenAmount) {
+          tokenAmount = amount;
+        }
+        
         
         path[0] = tokenA;
         path[1] = _wbnb;
