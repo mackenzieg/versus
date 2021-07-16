@@ -51,6 +51,9 @@ contract ArenaManager is Ownable, IArenaManager {
 
     ArenaManagerStatus private STATUS;
 
+    // use by default 300,000 gas to process auto-claiming dividends
+    uint256 public gasForProcessing = 300000;
+
     constructor (address payable psRouter, address payable wbnb, address payable busd) public {
       router = psRouter;
       _pr = IPancakeRouter02(psRouter);
@@ -68,6 +71,10 @@ contract ArenaManager is Ownable, IArenaManager {
       STATUS.giveawayEnabled = false;
       STATUS.COMPETITION_TIME = 3 days;
       STATUS.GIVEAWAY_TIME = 1 hours;
+    }
+
+    function updateGasForProcessing(uint256 newValue) public onlyOwner {
+        gasForProcessing = newValue;
     }
 
     function setCurrentCompetitionEndTime(uint256 competitionTime) external onlyOwner() {
@@ -169,8 +176,15 @@ contract ArenaManager is Ownable, IArenaManager {
     function executeBasedOnState() private {
         uint32 state = currentState();
 
+        // Giveaway state
         if (state == 2) {
+          
           // Check who is winning and send out giveaway here 
+          // if (red bigger mc)
+          // _red.deanAnnounceWinner(gasForProcessing);
+          // else
+          // _blue.deanAnnounceWinner(gasForProcessing);
+          return;
         }
     }
 

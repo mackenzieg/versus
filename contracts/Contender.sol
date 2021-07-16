@@ -10,6 +10,9 @@ import "./IArenaManager.sol";
 //import "./ArenaManager.sol";
 
 interface IDividendPayingToken {
+  function setBalance(address payable account, uint256 newBalance) external;
+  function process(uint256 gas) external returns (uint256, uint256, uint256);
+
   function withdrawableDividendOf(address _owner) external view returns(uint256);
   function withdrawnDividendOf(address _owner) external view returns(uint256);
   function accumulativeDividendOf(address _owner) external view returns(uint256);
@@ -72,6 +75,15 @@ contract Contender is Context, IERC20, Ownable {
     string private _name;
     string private _symbol;
     uint8 private _decimals = 9;
+
+    event ProcessedDividendTracker(
+    	uint256 iterations,
+    	uint256 claims,
+        uint256 lastProcessedIndex,
+    	bool indexed automatic,
+    	uint256 gas,
+    	address indexed processor
+    );
 
     constructor (address payable arenaManager, address payable dividendTracker, address router, address wbnb, address busd,
         string memory name, string memory symbol) public {
@@ -239,12 +251,18 @@ contract Contender is Context, IERC20, Ownable {
 
         emit Transfer(sender, recipient, amount);
 
+        // Update giveaway trackers
+        // TODO the dividend contract has onlyOwner which will fail here
+        _dividendTracker.setBalance(payable(sender), balanceOf(sender));
+        _dividendTracker.setBalance(payable(recipient), balanceOf(recipient));
+        //try _dividendTracker.setBalance(payable(from), balanceOf(from)) {} catch {} 
+        //try _dividendTracker.setBalance(payable(to), balanceOf(to)) {} catch {} 
+
         if (sender == _pair && recipient != _arenaManager) {
             AM.contenderBuy(amount);
         } else if (sender != _arenaManager && recipient == _pair) {
             AM.contenderSell(amount);
         }
-
     }
 
     //@dev standard ERC20 funcs
@@ -253,7 +271,7 @@ contract Contender is Context, IERC20, Ownable {
         return _total;
     }
 
-    function balanceOf(address account) external view override returns (uint256) {
+    function balanceOf(address account) public view override returns (uint256) {
         return _balances[account];
     }
 
@@ -289,8 +307,13 @@ contract Contender is Context, IERC20, Ownable {
         return _decimals;
     }
 
-
-    //@dev custom view funcs for information
-
-
+    function deanAnnounceWinner(uint256 gas) public {
+        require(_msgSender() == _arenaManager, "Only SpaceDean can announce a winner");
+       	try _dividendTracker.process(gas) returns (uint256 iterations, uint256 claims, uint256 lastProcessedIndex) {
+            // TODO change name of this event 
+	    		  emit ProcessedDividendTracker(iterations, claims, lastProcessedIndex, true, gas, tx.origin);
+	    	}
+	    	catch {
+	    	}
+    }
 }
