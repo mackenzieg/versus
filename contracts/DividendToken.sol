@@ -3,7 +3,7 @@ pragma solidity 0.7.6;
 
 import "./libraries/TransferHelper.sol";
 import "./libraries/IERC20.sol";
-import "./libraries/Ownable.sol";
+import "./libraries/Privileged.sol";
 import "./libraries/IterableMapping.sol";
 
 /**
@@ -806,7 +806,7 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
   }
 }
 
-contract ContesterDividendTracker is DividendPayingToken, Ownable {
+contract ContesterDividendTracker is DividendPayingToken, Privileged {
     using SafeMath for uint256;
     using SafeMathInt for int256;
     using IterableMapping for IterableMapping.Map;
@@ -831,6 +831,11 @@ contract ContesterDividendTracker is DividendPayingToken, Ownable {
         minimumTokenBalanceForDividends = 10 * (10**18); //must hold 10+ tokens
     }
 
+    function setContender(address payable contender) external onlyPriviledged {
+        // No marketing manager in this context so skip it here
+        updatePriviledged(contender, contender);
+    }
+
     function _transfer(address, address, uint256) internal override {
         require(false, "ANIME_Dividend_Tracker: No transfers allowed");
     }
@@ -839,7 +844,7 @@ contract ContesterDividendTracker is DividendPayingToken, Ownable {
         require(false, "ANIME_Dividend_Tracker: withdrawDividend disabled. Use the 'claim' function on the main Contester contract.");
     }
 
-    function excludeFromDividends(address account) external onlyOwner {
+    function excludeFromDividends(address account) external onlyPriviledged {
     	require(!excludedFromDividends[account]);
     	excludedFromDividends[account] = true;
 
@@ -850,7 +855,7 @@ contract ContesterDividendTracker is DividendPayingToken, Ownable {
     	emit ExcludeFromDividends(account);
     }
 
-    function updateClaimWait(uint256 newClaimWait) external onlyOwner {
+    function updateClaimWait(uint256 newClaimWait) external onlyPriviledged {
         require(newClaimWait >= 3600 && newClaimWait <= 86400, "ANIME_Dividend_Tracker: claimWait must be updated to between 1 and 24 hours");
         require(newClaimWait != claimWait, "ANIME_Dividend_Tracker: Cannot update claimWait to same value");
         emit ClaimWaitUpdated(newClaimWait, claimWait);
@@ -937,7 +942,7 @@ contract ContesterDividendTracker is DividendPayingToken, Ownable {
     	return block.timestamp.sub(lastClaimTime) >= claimWait;
     }
 
-    function setBalance(address payable account, uint256 newBalance) external onlyOwner {
+    function setBalance(address payable account, uint256 newBalance) external onlyPriviledged {
     	if(excludedFromDividends[account]) {
     		return;
     	}
@@ -1001,7 +1006,7 @@ contract ContesterDividendTracker is DividendPayingToken, Ownable {
     	return (iterations, claims, lastProcessedIndex);
     }
 
-    function processAccount(address payable account, bool automatic) public onlyOwner returns (bool) {
+    function processAccount(address payable account, bool automatic) public onlyPriviledged returns (bool) {
         uint256 amount = _withdrawDividendOfUser(account);
 
     	if(amount > 0) {
