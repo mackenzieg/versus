@@ -1,6 +1,6 @@
-pragma solidity 6.12;
+pragma solidity 0.6.12;
 
 interface IContender { 
-    function deanAnnounceWinner(uint256 gas) public;
-    function getDividendTrackerContract() public returns (address payable);
+    function deanAnnounceWinner(uint256 gas) external;
+    function getDividendTrackerContract() external returns (address payable);
 }

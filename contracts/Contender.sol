@@ -119,7 +119,7 @@ contract Contender is Context, IERC20, Privileged {
         DT.excludeFromDividends(deadAddress);
     }
 
-    function getDividendTrackerContract() public return address payable {
+    function getDividendTrackerContract() external returns (address payable) {
         return _dividendTracker;
     }
 
@@ -330,7 +330,7 @@ contract Contender is Context, IERC20, Privileged {
         return _decimals;
     }
 
-    function deanAnnounceWinner(uint256 gas) public {
+    function deanAnnounceWinner(uint256 gas) external {
         require(_msgSender() == _arenaManager, "Only SpaceDean can announce a winner");
        	try DT.process(gas) returns (uint256 iterations, uint256 claims, uint256 lastProcessedIndex) {
             // TODO change name of this event 
