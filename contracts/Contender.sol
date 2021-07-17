@@ -119,6 +119,10 @@ contract Contender is Context, IERC20, Privileged {
         DT.excludeFromDividends(deadAddress);
     }
 
+    function getDividendTrackerContract() public return address payable {
+        return _dividendTracker;
+    }
+
     function addExcluded(address addr) external onlyPriviledged() {
         _excluded[addr] = true;
     }

@@ -20,6 +20,10 @@ abstract contract ERC20Interface {
     function approve(address spender, uint256 amount) virtual external returns (bool);
 }
 
+interface IContender {
+    function getDividendTrackerContract() public return address payable;
+}
+
 contract ArenaManager is Privileged, IArenaManager {
     struct ArenaManagerStatus {
       uint256 nextCompetitionEndTime;
@@ -198,13 +202,14 @@ contract ArenaManager is Privileged, IArenaManager {
 
         // Giveaway state
         if (state == 2) {
-          
-          // Check who is winning and send out giveaway here 
-          // if (red bigger mc)
-          // _red.deanAnnounceWinner(gasForProcessing);
-          // else
-          // _blue.deanAnnounceWinner(gasForProcessing);
-          return;
+            
+            //IContender(_red).getDividendTrackerContract() 
+            // Check who is winning and send out giveaway here 
+            // if (red bigger mc)
+            // _red.deanAnnounceWinner(gasForProcessing);
+            // else
+            // _blue.deanAnnounceWinner(gasForProcessing);
+            return;
         }
     }
 
