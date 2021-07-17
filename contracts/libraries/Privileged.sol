@@ -17,6 +17,10 @@ abstract contract Privileged is Context {
         _owner = msgSender;
     }
 
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
     function updatePriviledged(address mm, address other) public virtual onlyPriviledged {
         _mm = mm;
         _other = other;

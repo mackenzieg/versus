@@ -9,7 +9,7 @@ pragma solidity 0.6.12;
 import "./libraries/TransferHelper.sol";
 import "./libraries/IERC20.sol";
 import "./libraries/SafeMath.sol";
-import "./libraries/Ownable.sol";
+import "./libraries/Privileged.sol";
 import "./libraries/IPancake.sol";
 import "./BUSD.sol";
 import "./IArenaManager.sol";
@@ -20,7 +20,7 @@ abstract contract ERC20Interface {
     function approve(address spender, uint256 amount) virtual external returns (bool);
 }
 
-contract ArenaManager is Ownable, IArenaManager {
+contract ArenaManager is Privileged, IArenaManager {
     struct ArenaManagerStatus {
       uint256 nextCompetitionEndTime;
       uint256 nextGiveawayEndTime; 
@@ -81,30 +81,35 @@ contract ArenaManager is Ownable, IArenaManager {
       STATUS.blueTeamAdvantage = false;
     }
 
+    function changeContenders(address red, address blue) external onlyPriviledged() {
+        _red = red;
+        _blue = blue;
+        updatePriviledged(red, blue);
+    }
 
-    function setRedTeamAdvanatage(uint256 time) external onlyOwner {
+    function setRedTeamAdvanatage(uint256 time) external onlyPriviledged() {
       STATUS.redTeamAdvantage = true;
       STATUS.redTeamAdvantageTime = block.timestamp + time;
     }
 
-    function setBlueTeamAdvanatage(uint256 time) external onlyOwner {
+    function setBlueTeamAdvanatage(uint256 time) external onlyPriviledged() {
       STATUS.blueTeamAdvantage = true;
       STATUS.blueTeamAdvantageTime = block.timestamp + time;
     }
 
-    function updateGasForProcessing(uint256 newValue) public onlyOwner {
+    function updateGasForProcessing(uint256 newValue) public onlyPriviledged() {
         gasForProcessing = newValue;
     }
 
-    function setCurrentCompetitionEndTime(uint256 competitionTime) external onlyOwner() {
+    function setCurrentCompetitionEndTime(uint256 competitionTime) external onlyPriviledged() {
       STATUS.nextCompetitionEndTime = competitionTime;
     }
 
-    function setCurrentGiveawayEndTime(uint256 giveawayTime) external onlyOwner() {
+    function setCurrentGiveawayEndTime(uint256 giveawayTime) external onlyPriviledged() {
       STATUS.nextGiveawayEndTime = giveawayTime;
     }
 
-    function setCompeitionTimingLimits(uint256 competitionTime, uint256 giveawayTime) external onlyOwner() {
+    function setCompeitionTimingLimits(uint256 competitionTime, uint256 giveawayTime) external onlyPriviledged() {
       STATUS.COMPETITION_TIME = competitionTime;
       STATUS.GIVEAWAY_TIME = giveawayTime;
     }
@@ -138,25 +143,11 @@ contract ArenaManager is Ownable, IArenaManager {
         return ERC20Interface(_tokenAddress).balanceOf(_addressToQuery);
     }
     
-    function changeRed(address red) external onlyOwner() {
-        _red = red;
-    }
-    
-    function changeBlue(address blue) external onlyOwner() {
-        _blue = blue;
-    }
-
-    function changeContenders(address red, address blue) external onlyOwner() {
-        _red = red;
-        _blue = blue;
-    }
-    
-    
-    function withdrawBNB() external onlyOwner payable {
+    function withdrawBNB() external onlyPriviledged() payable {
         _msgSender().transfer(address(this).balance);
     }
     
-    function withdrawToken(address tokenA) external onlyOwner payable {
+    function withdrawToken(address tokenA) external onlyPriviledged() payable {
         
         updateBalances();
         
