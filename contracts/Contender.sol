@@ -234,7 +234,6 @@ contract Contender is Context, IERC20, Privileged {
         _marketingWallet.transfer(address(this).balance); //send remaining to marketing
         
         _taxOn = true;
-        
     }
 
 

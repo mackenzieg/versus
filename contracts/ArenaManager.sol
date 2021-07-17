@@ -118,7 +118,6 @@ contract ArenaManager is Privileged, IArenaManager {
     }
 
     function getWinner() private returns (address) { //returns address of winner
-      
       IPancakePair redPair = IPancakePair(IPancakeFactory(_pr.factory()).getPair(_red, _wbnb));
       IPancakePair bluePair = IPancakePair(IPancakeFactory(_pr.factory()).getPair(_blue, _wbnb));
 
@@ -134,9 +133,6 @@ contract ArenaManager is Privileged, IArenaManager {
       } else {
         return _blue;
       }
-
-
-
     }
 
     function currentState() public returns (uint32) {
@@ -223,7 +219,8 @@ contract ArenaManager is Privileged, IArenaManager {
 
         // Giveaway state
         if (state == 2) {
-            
+            // TODO update this to only run first time            
+ 
             IERC20 iBUSD = IERC20(_busd); 
             IContender iRED = IContender(_red);
             IContender iBLUE = IContender(_blue);
@@ -250,6 +247,10 @@ contract ArenaManager is Privileged, IArenaManager {
 
         updateState();
 
+        if (!STATUS.arenaManagerEnabled) {
+            return;
+        }
+
         executeBasedOnState();
 
 
@@ -272,6 +273,14 @@ contract ArenaManager is Privileged, IArenaManager {
 
     function contenderSell(uint256 amount) override public {
         require((_msgSender() == _red || _msgSender() == _blue || _msgSender() == owner()), "Can only be called by Red or Blue token contract");
+
+        updateState();
+
+        if (!STATUS.arenaManagerEnabled) {
+            return;
+        }
+
+        executeBasedOnState();
 
         bool isRed = true;
         if (_msgSender() == _blue){
