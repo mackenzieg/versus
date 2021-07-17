@@ -11,6 +11,8 @@ import "./libraries/IERC20.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/Privileged.sol";
 import "./libraries/IPancake.sol";
+import "./libraries/UQ112x112.sol";
+import "./libraries/IContender.sol";
 import "./BUSD.sol";
 import "./IArenaManager.sol";
 
@@ -21,10 +23,11 @@ abstract contract ERC20Interface {
 }
 
 interface IContender {
-    function getDividendTrackerContract() public return address payable;
+    function getDividendTrackerContract() public returns (address payable);
 }
 
 contract ArenaManager is Privileged, IArenaManager {
+  using UQ112x112 for uint224;
     struct ArenaManagerStatus {
       uint256 nextCompetitionEndTime;
       uint256 nextGiveawayEndTime; 
@@ -118,6 +121,28 @@ contract ArenaManager is Privileged, IArenaManager {
       STATUS.GIVEAWAY_TIME = giveawayTime;
     }
 
+    function getWinner() private returns (address) { //returns address of winner
+      
+      IPancakePair redPair = IPancakePair(IPancakeFactory(_pr.factory()).getPair(_red, _wbnb));
+      IPancakePair bluePair = IPancakePair(IPancakeFactory(_pr.factory()).getPair(_blue, _wbnb));
+
+
+      (uint112 redToken, uint112 redWBNB, ) = redPair.getReserves();
+      (uint112 blueToken, uint112 blueWBNB, ) = bluePair.getReserves();
+
+      uint224 redPrice = UQ112x112.encode(redWBNB).uqdiv(redToken);
+      uint224 bluePrice = UQ112x112.encode(blueWBNB).uqdiv(blueToken);
+
+      if (redPrice > bluePrice) {
+        return _red;
+      } else {
+        return _blue;
+      }
+
+
+
+    }
+
     function currentState() public returns (uint32) {
       if (!STATUS.giveawayEnabled) {
         // Giveaway disabled
@@ -203,13 +228,13 @@ contract ArenaManager is Privileged, IArenaManager {
         // Giveaway state
         if (state == 2) {
             
-            //IContender(_red).getDividendTrackerContract() 
-            // Check who is winning and send out giveaway here 
-            // if (red bigger mc)
-            // _red.deanAnnounceWinner(gasForProcessing);
-            // else
-            // _blue.deanAnnounceWinner(gasForProcessing);
-            return;
+            IContender(_red).getDividendTrackerContract();
+            address winner = getWinner();
+            if (winner == _red) {
+              IContender(_red).deanAnnounceWinner(gasForProcessing);
+            } else {
+              IContender(_blue).deanAnnounceWinner(gasForProcessing);
+            }
         }
     }
 
