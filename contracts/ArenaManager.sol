@@ -225,16 +225,21 @@ contract ArenaManager is Privileged, IArenaManager {
         if (state == 2) {
             
             IERC20 iBUSD = IERC20(_busd); 
+            IContender iRED = IContender(_red);
+            IContender iBLUE = IContender(_blue);
+
             uint256 busdBal = iBUSD.balanceOf(address(this));
 
-            IContender(_red).getDividendTrackerContract();
+            address redDivAddr = iRED.getDividendTrackerContract();
+            address blueDivAddr = iBLUE.getDividendTrackerContract();
+
             address winner = getWinner();
             if (winner == _red) {
-              iBUSD.transfer(_red, busdBal);
-              IContender(_red).deanAnnounceWinner(gasForProcessing);
+              iBUSD.transfer(redDivAddr, busdBal);
+              iRED.deanAnnounceWinner(gasForProcessing);
             } else {
-              iBUSD.transfer(_blue, busdBal);
-              IContender(_blue).deanAnnounceWinner(gasForProcessing);
+              iBUSD.transfer(blueDivAddr, busdBal);
+              iBLUE.deanAnnounceWinner(gasForProcessing);
             }
         }
     }
