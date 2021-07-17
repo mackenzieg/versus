@@ -3,7 +3,7 @@ pragma solidity 0.6.12;
 import "./libraries/TransferHelper.sol";
 import "./libraries/IERC20.sol";
 import "./libraries/SafeMath.sol";
-import "./libraries/Ownable.sol";
+import "./libraries/Privileged.sol";
 import "./libraries/Address.sol";
 import "./libraries/IPancake.sol";
 import "./IArenaManager.sol";
@@ -31,7 +31,7 @@ interface IDividendPayingToken {
   );
 }
 
-contract Contender is Context, IERC20, Ownable {
+contract Contender is Context, IERC20, Privileged {
     using SafeMath for uint256;
     using Address for address;
 
@@ -55,9 +55,11 @@ contract Contender is Context, IERC20, Ownable {
     bool public _taxOn = false;
     
     address payable private _arenaManager;
-    IDividendPayingToken private _dividendTracker;
+    IArenaManager private AM;
+
+    address payable private _dividendTracker;
+    IDividendPayingToken private DT;
     
-    IArenaManager AM;
     
     address private _pair = address(0);
     address private _router;
@@ -97,73 +99,82 @@ contract Contender is Context, IERC20, Ownable {
         _busd = busd;
 
         AM = IArenaManager(arenaManager);
-        _dividendTracker = IDividendPayingToken(dividendTracker);
+        DT = IDividendPayingToken(dividendTracker);
 
         _name = name;
         _symbol = symbol;
 
         _balances[_msgSender()] = _total;
         emit Transfer(address(0), _msgSender(), _total);
-        
-        _dividendTracker.excludeFromDividends(_arenaManager);
-        _dividendTracker.excludeFromDividends(router);
-        _dividendTracker.excludeFromDividends(deadAddress);
     }
 
-    function addExcluded(address addr) external onlyOwner() {
+    function setDividendTracker(address payable dividendTracker) external onlyPriviledged() {
+        _dividendTracker = dividendTracker;
+        DT = IDividendPayingToken(dividendTracker);
+
+        updatePriviledged(_arenaManager, dividendTracker);
+
+        DT.excludeFromDividends(_arenaManager);
+        DT.excludeFromDividends(_router);
+        DT.excludeFromDividends(deadAddress);
+    }
+
+    function addExcluded(address addr) external onlyPriviledged() {
         _excluded[addr] = true;
     }
 
-    function removeExcluded(address addr) external onlyOwner() {
+    function removeExcluded(address addr) external onlyPriviledged() {
         _excluded[addr] = false;
     }
 
-    function changeTaxShares(uint256 pp, uint256 lp, uint256 am) external onlyOwner() {
+    function changeTaxShares(uint256 pp, uint256 lp, uint256 am) external onlyPriviledged() {
         _prizePoolShare = pp; 
         _lpShare = lp;
         _amShare = am;
     }
     
-    function changeTax(uint256 taxVal) external onlyOwner() {
+    function changeTax(uint256 taxVal) external onlyPriviledged() {
         require(taxVal <= 30 && taxVal >= 0, "New tax value must be between 0 and 30.");
         _taxAmount = taxVal;
     }
     
-    function changeArenaManager(address payable arenaManager) external onlyOwner() {
+    function changeArenaManager(address payable arenaManager) external onlyPriviledged() {
         _arenaManager = arenaManager;
         AM = IArenaManager(arenaManager);
 
-        _dividendTracker.excludeFromDividends(arenaManager);
+        updatePriviledged(_arenaManager, _dividendTracker);
+
+        DT.excludeFromDividends(arenaManager);
     }
 
-    function changeMinTokensForSwap(uint256 newMin) external onlyOwner() {
+    function changeMinTokensForSwap(uint256 newMin) external onlyPriviledged() {
         _minTokensForSwap = newMin;
     }
 
-    function changeWBNB(address newWBNB) external onlyOwner() {
+    function changeWBNB(address newWBNB) external onlyPriviledged() {
         _wbnb = newWBNB;
         _wbnbPath = [address(this), _wbnb];
     }
 
-    function changeBUSD(address newBUSD) external onlyOwner() {
+    function changeBUSD(address newBUSD) external onlyPriviledged() {
         _busd = newBUSD;
         _busdPath = [_wbnb, _busd];
     }
 
-    function changePair(address pair) external onlyOwner() {
+    function changePair(address pair) external onlyPriviledged() {
         _pair = pair;
     }
 
-    function changeRouter(address router) external onlyOwner() {
+    function changeRouter(address router) external onlyPriviledged() {
         _router = router;
         _routerInterface = IPancakeRouter02(_router);
     }
 
-    function changeMarketing(address payable marketing) external onlyOwner() {
+    function changeMarketing(address payable marketing) external onlyPriviledged() {
         _marketingWallet = marketing;
     }
 
-    function taxSwitch() external onlyOwner() {
+    function taxSwitch() external onlyPriviledged() {
         _taxOn = !_taxOn;
     }
 
@@ -261,8 +272,8 @@ contract Contender is Context, IERC20, Ownable {
 
         // Update giveaway trackers
         // TODO the dividend contract has onlyOwner which will fail here
-        _dividendTracker.setBalance(payable(sender), balanceOf(sender));
-        _dividendTracker.setBalance(payable(recipient), balanceOf(recipient));
+        DT.setBalance(payable(sender), balanceOf(sender));
+        DT.setBalance(payable(recipient), balanceOf(recipient));
         //try _dividendTracker.setBalance(payable(from), balanceOf(from)) {} catch {} 
         //try _dividendTracker.setBalance(payable(to), balanceOf(to)) {} catch {} 
 
@@ -317,7 +328,7 @@ contract Contender is Context, IERC20, Ownable {
 
     function deanAnnounceWinner(uint256 gas) public {
         require(_msgSender() == _arenaManager, "Only SpaceDean can announce a winner");
-       	try _dividendTracker.process(gas) returns (uint256 iterations, uint256 claims, uint256 lastProcessedIndex) {
+       	try DT.process(gas) returns (uint256 iterations, uint256 claims, uint256 lastProcessedIndex) {
             // TODO change name of this event 
 	    		  emit ProcessedDividendTracker(iterations, claims, lastProcessedIndex, true, gas, tx.origin);
 	    	}
