@@ -73,6 +73,8 @@ contract Contender is Context, IERC20, Ownable {
  
     address payable private _marketingWallet = 0x1366b918Fb5b78c6cf574f32B304255B3A3C8060;
 
+    address payable public deadAddress = payable(0x000000000000000000000000000000000000dEaD);
+
     string private _name;
     string private _symbol;
     uint8 private _decimals = 9;
@@ -105,7 +107,7 @@ contract Contender is Context, IERC20, Ownable {
         
         _dividendTracker.excludeFromDividends(_arenaManager);
         _dividendTracker.excludeFromDividends(router);
-        _dividendTracker.excludeFromDividends(0x000000000000000000000000000000000000dead);
+        _dividendTracker.excludeFromDividends(deadAddress);
     }
 
     function addExcluded(address addr) external onlyOwner() {

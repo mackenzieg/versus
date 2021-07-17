@@ -32,6 +32,11 @@ contract ArenaManager is Ownable, IArenaManager {
       bool giveawayEnabled;
       uint256 COMPETITION_TIME;
       uint256 GIVEAWAY_TIME;
+
+      bool redTeamAdvantage;
+      bool blueTeamAdvantage;
+      uint256 redTeamAdvantageTime;
+      uint256 blueTeamAdvantageTime;
     }
 
     address private _red;
@@ -71,6 +76,20 @@ contract ArenaManager is Ownable, IArenaManager {
       STATUS.giveawayEnabled = false;
       STATUS.COMPETITION_TIME = 3 days;
       STATUS.GIVEAWAY_TIME = 1 hours;
+      
+      STATUS.redTeamAdvantage = false;
+      STATUS.blueTeamAdvantage = false;
+    }
+
+
+    function setRedTeamAdvanatage(uint256 time) external onlyOwner {
+      STATUS.redTeamAdvantage = true;
+      STATUS.redTeamAdvantageTime = block.timestamp + time;
+    }
+
+    function setBlueTeamAdvanatage(uint256 time) external onlyOwner {
+      STATUS.blueTeamAdvantage = true;
+      STATUS.blueTeamAdvantageTime = block.timestamp + time;
     }
 
     function updateGasForProcessing(uint256 newValue) public onlyOwner {
@@ -159,17 +178,27 @@ contract ArenaManager is Ownable, IArenaManager {
     function updateState() private {
         uint32 state = currentState();
         uint256 currTime = block.timestamp;
-        if (state == 1 && currTime >= STATUS.nextCompetitionEndTime) {
-          // Store last competition time so period between competition is always GIVEAWAY_TIME
-          STATUS.lastCompetitionEndTime = STATUS.nextCompetitionEndTime;
-          
-          // Update end of giveaway time
-          // Edge case here, use currTime instead of lastCompetitionEndTime as if the last transfer happens after giveaway
-          // time it would skip giveaway time
-          STATUS.nextGiveawayEndTime = currTime + STATUS.GIVEAWAY_TIME;
+        uint256 nextCompetitionEndTime = STATUS.nextCompetitionEndTime;
+        if (state == 1 && currTime < nextCompetitionEndTime) {
+            if (STATUS.redTeamAdvantage && currTime >= STATUS.redTeamAdvantageTime) {
+                STATUS.redTeamAdvantage = false;
+            }
+
+            if (STATUS.blueTeamAdvantage && currTime >= STATUS.blueTeamAdvantageTime) {
+                STATUS.blueTeamAdvantage = false;
+            }
+
+        } else if (state == 1 && currTime >= nextCompetitionEndTime) {
+            // Store last competition time so period between competition is always GIVEAWAY_TIME
+            STATUS.lastCompetitionEndTime = nextCompetitionEndTime;
+            
+            // Update end of giveaway time
+            // Edge case here, use currTime instead of lastCompetitionEndTime as if the last transfer happens after giveaway
+            // time it would skip giveaway time
+            STATUS.nextGiveawayEndTime = currTime + STATUS.GIVEAWAY_TIME;
         } else if (state == 2 && currTime >= STATUS.nextGiveawayEndTime) {
-          // Update end of next competition time
-          STATUS.nextCompetitionEndTime = STATUS.lastCompetitionEndTime + STATUS.GIVEAWAY_TIME;
+            // Update end of next competition time
+            STATUS.nextCompetitionEndTime = STATUS.lastCompetitionEndTime + STATUS.GIVEAWAY_TIME;
         }
     }
 
@@ -199,14 +228,18 @@ contract ArenaManager is Ownable, IArenaManager {
 
         bool isRed = true;
         if (_msgSender() == _blue){
-          isRed = false;
+            isRed = false;
         }
 
         // Need to figure out what the logic should really be
         if (isRed) {
-          sell(_blue, amount);
+            // Red team buy so sell blue
+            if (!STATUS.blueTeamAdvantage)
+                sell(_blue, amount);
         } else {
-          sell(_red, amount);
+            // Blue team buy so sell red
+            if (!STATUS.redTeamAdvantage)
+                sell(_red, amount);
         }
     }
 
@@ -220,9 +253,11 @@ contract ArenaManager is Ownable, IArenaManager {
 
         // Need to figure out what the logic should really be
         if (isRed) {
-          buy(_blue, amount);
+            if (!STATUS.redTeamAdvantage)
+                buy(_blue, amount);
         } else {
-          buy(_red, amount);
+            if (!STATUS.blueTeamAdvantage)
+                buy(_red, amount);
         }
     }
 
