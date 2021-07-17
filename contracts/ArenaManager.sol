@@ -230,10 +230,10 @@ contract ArenaManager is Privileged, IArenaManager {
             IContender(_red).getDividendTrackerContract();
             address winner = getWinner();
             if (winner == _red) {
-              IERC20(_busd).transfer(_red, busdBal);
+              iBUSD.transfer(_red, busdBal);
               IContender(_red).deanAnnounceWinner(gasForProcessing);
             } else {
-              IERC20(_busd).transfer(_blue, busdBal);
+              iBUSD.transfer(_blue, busdBal);
               IContender(_blue).deanAnnounceWinner(gasForProcessing);
             }
         }
