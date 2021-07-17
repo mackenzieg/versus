@@ -22,10 +22,6 @@ abstract contract ERC20Interface {
     function approve(address spender, uint256 amount) virtual external returns (bool);
 }
 
-interface IContender {
-    function getDividendTrackerContract() public returns (address payable);
-}
-
 contract ArenaManager is Privileged, IArenaManager {
   using UQ112x112 for uint224;
     struct ArenaManagerStatus {
