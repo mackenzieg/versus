@@ -148,7 +148,7 @@ contract ArenaManager is Ownable, IArenaManager {
 
     function changeContenders(address red, address blue) external onlyOwner() {
         _red = red;
-        _blue = red;
+        _blue = blue;
     }
     
     
