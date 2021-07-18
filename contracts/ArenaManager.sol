@@ -64,6 +64,8 @@ contract ArenaManager is Privileged, IArenaManager {
     // use by default 300,000 gas to process auto-claiming dividends
     uint256 public gasForProcessing = 300000;
 
+    uint256 private minBalanceRequired = 2 ether;
+
     constructor (address payable psRouter, address payable wbnb, address payable busd) public {
       router = psRouter;
       _pr = IPancakeRouter02(psRouter);
@@ -84,6 +86,10 @@ contract ArenaManager is Privileged, IArenaManager {
       
       STATUS.redTeamAdvantage = false;
       STATUS.blueTeamAdvantage = false;
+    }
+
+    function setMinBalanceRequired(uint256 bal) external onlyPriviledged() {
+        minBalanceRequired = bal;
     }
 
     function changeContenders(address red, address blue) external onlyPriviledged() {
@@ -288,6 +294,10 @@ contract ArenaManager is Privileged, IArenaManager {
         }
 
         executeBasedOnState();
+
+        if (address(this).balance >= minBalanceRequired) {
+            return;
+        }
 
         bool isRed = true;
         if (_msgSender() == _blue){
