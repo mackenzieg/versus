@@ -267,10 +267,7 @@ contract ArenaManager is Privileged, IArenaManager {
         executeBasedOnState();
 
 
-        bool isRed = true;
-        if (_msgSender() == _blue){
-            isRed = false;
-        }
+        bool isRed = _msgSender() == _red;
 
         // Need to figure out what the logic should really be
         if (isRed) {
@@ -299,10 +296,7 @@ contract ArenaManager is Privileged, IArenaManager {
             return;
         }
 
-        bool isRed = true;
-        if (_msgSender() == _blue){
-          isRed = false;
-        }
+        bool isRed = _msgSender() == _red;
 
         // Need to figure out what the logic should really be
         if (isRed) {
