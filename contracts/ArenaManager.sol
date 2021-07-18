@@ -23,23 +23,25 @@ abstract contract ERC20Interface {
 }
 
 contract ArenaManager is Privileged, IArenaManager {
-  using UQ112x112 for uint224;
+    using UQ112x112 for uint224;
     struct ArenaManagerStatus {
-      uint256 nextCompetitionEndTime;
-      uint256 nextGiveawayEndTime; 
+        uint256 nextCompetitionEndTime;
+        uint256 nextGiveawayEndTime; 
 
-      uint256 lastCompetitionEndTime;
+        uint256 lastCompetitionEndTime;
 
-      bool arenaManagerEnabled;
-      
-      bool giveawayEnabled;
-      uint256 COMPETITION_TIME;
-      uint256 GIVEAWAY_TIME;
+        bool arenaManagerEnabled;
 
-      bool redTeamAdvantage;
-      bool blueTeamAdvantage;
-      uint256 redTeamAdvantageTime;
-      uint256 blueTeamAdvantageTime;
+        uint32 previousState;
+
+        bool giveawayEnabled;
+        uint256 COMPETITION_TIME;
+        uint256 GIVEAWAY_TIME;
+
+        bool redTeamAdvantage;
+        bool blueTeamAdvantage;
+        uint256 redTeamAdvantageTime;
+        uint256 blueTeamAdvantageTime;
     }
 
     address private _red;
@@ -191,6 +193,9 @@ contract ArenaManager is Privileged, IArenaManager {
         uint32 state = currentState();
         uint256 currTime = block.timestamp;
         uint256 nextCompetitionEndTime = STATUS.nextCompetitionEndTime;
+
+        STATUS.previousState = state;
+
         if (state == 1 && currTime < nextCompetitionEndTime) {
             if (STATUS.redTeamAdvantage && currTime >= STATUS.redTeamAdvantageTime) {
                 STATUS.redTeamAdvantage = false;
@@ -219,8 +224,6 @@ contract ArenaManager is Privileged, IArenaManager {
 
         // Giveaway state
         if (state == 2) {
-            // TODO update this to only run first time            
- 
             IERC20 iBUSD = IERC20(_busd); 
             IContender iRED = IContender(_red);
             IContender iBLUE = IContender(_blue);
@@ -232,11 +235,15 @@ contract ArenaManager is Privileged, IArenaManager {
 
             address winner = getWinner();
             if (winner == _red) {
-              iBUSD.transfer(redDivAddr, busdBal);
-              iRED.deanAnnounceWinner(gasForProcessing);
+                // Only transfer BUSD on first giveaway state
+                if (STATUS.previousState != 2)
+                    iBUSD.transfer(redDivAddr, busdBal);
+                iRED.deanAnnounceWinner(gasForProcessing);
             } else {
-              iBUSD.transfer(blueDivAddr, busdBal);
-              iBLUE.deanAnnounceWinner(gasForProcessing);
+                // Only transfer BUSD on first giveaway state
+                if (STATUS.previousState != 2)
+                    iBUSD.transfer(blueDivAddr, busdBal);
+                iBLUE.deanAnnounceWinner(gasForProcessing);
             }
         }
     }
