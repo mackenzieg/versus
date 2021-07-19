@@ -47,6 +47,7 @@ contract Contender is Context, IERC20, Privileged {
     uint256 private _prizePoolShare = 5555; 
     //uint256 private _marketingShare = 2222;
     uint256 private _lpShare = 1111;
+    uint256 private _lpTokensDivider = 10;
     uint256 private _amShare = 1111;
 
     uint256 private _lpShareDiv = 10;
@@ -190,7 +191,7 @@ contract Contender is Context, IERC20, Privileged {
 
         uint256 tokenBal = _balances[address(this)];
 
-        uint256 tokensForLP = tokenBal.div(_lpShareDiv);
+        uint256 tokensForLP = tokenBal.div(_lpTokensDivider);
 
         uint256 tokensToSell = tokenBal.sub(tokensForLP);
 
