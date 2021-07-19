@@ -1,8 +1,9 @@
-
-- [ ] Test supply minted to owner of contenders
+Osama:
+- [x] Test supply minted to owner of contenders
 - [ ] Make sure linking between all contracts is working
 - [ ] Make sure permissions between all contracts is working
 
+Mackenzie:
 - [ ] Make sure taxes are correct and can be changed
 - [ ] Make sure mm gets 1% in BNB
 - [ ] Make sure marketing gets 2% BNB
