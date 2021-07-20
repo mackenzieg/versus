@@ -44,13 +44,12 @@ contract Contender is Context, IERC20, Privileged {
 
     //@dev 5% prize pool, 2% auto-lp, 2% marketing, 1% arena manager. weird math to fit all fees into one swap.
 
-    uint256 private _prizePoolShare = 5555; 
-    uint256 private _marketingShare = 2222;
-    uint256 private _lpShare = 1111;
-    uint256 private _lpTokensDivider = 10;
-    uint256 private _amShare = 1111;
 
-    uint256 private _lpShareDiv = 10;
+    // These are out of 100
+    uint256 private _lpPercentage = 20;
+    uint256 private _prizePoolPercentage = 50;
+    uint256 private _mmPercentage = 10;        
+    uint256 private _marketingPercentage = 20;        
 
     uint256 public _minTokensForSwap = _total.mul(5).div(1000); //500k Tokens
     bool public _taxOn = false;
@@ -67,7 +66,6 @@ contract Contender is Context, IERC20, Privileged {
     address private _busd;
     bool private swapAndLiqEnabled = false;
     bool inSwapAndLiquify;
-
 
     IPancakeRouter02 _routerInterface = IPancakeRouter02(_router);
 
@@ -91,6 +89,13 @@ contract Contender is Context, IERC20, Privileged {
         bool indexed automatic,
         uint256 gas,
         address indexed processor
+    );
+
+    event SwapAndLiquifyEnabledUpdated(bool enabled);
+    event SwapAndLiquify(
+        uint256 tokensSwapped,
+        uint256 ethReceived,
+        uint256 tokensIntoLiqudity
     );
 
     constructor (address payable arenaManager, address payable dividendTracker, address router, address wbnb, address busd,
@@ -141,14 +146,14 @@ contract Contender is Context, IERC20, Privileged {
     }
 
     function getTaxShares() public view returns(uint256, uint256, uint256, uint256) {
-        return (_prizePoolShare, _marketingShare, _lpShare, _amShare);
+        return (_prizePoolPercentage, _marketingPercentage, _lpPercentage, _mmPercentage);
     }
 
-    function changeTaxShares(uint256 pp, uint256 ms, uint256 lp, uint256 am) external onlyPriviledged() {
-        _prizePoolShare = pp; 
-        _marketingShare = ms;
-        _lpShare = lp;
-        _amShare = am;
+    function changeTaxShares(uint256 pp, uint256 mp, uint256 lp, uint256 mm) external onlyPriviledged() {
+        _prizePoolPercentage = pp; 
+        _marketingPercentage = mp;
+        _lpPercentage = lp;
+        _mmPercentage = mm;
     }
     
     function changeTax(uint256 taxVal) external onlyPriviledged() {
@@ -200,14 +205,54 @@ contract Contender is Context, IERC20, Privileged {
         _marketingWallet = marketing;
     }
 
-    function taxSwitch() external onlyPriviledged() {
-        _taxOn = !_taxOn;
+    function setTax(bool tax) external onlyPriviledged() {
+        _taxOn = tax;
+    }
+
+    function swapTokensForEth(uint256 tokenAmount) private {
+        // generate the uniswap pair path of token -> weth
+        address[] memory path = new address[](2);
+        path[0] = address(this);
+        path[1] = _routerInterface.WETH();
+
+        _approve(address(this), address(_routerInterface), tokenAmount);
+
+        // make the swap
+        _routerInterface.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            tokenAmount,
+            0, // accept any amount of ETH
+            path,
+            address(this), // The contract
+            block.timestamp
+        );
+
+        //emit SwapTokensForETH(tokenAmount, path);
+    }
+
+    function swapETHForTokens(uint256 amount) private {
+        // generate the uniswap pair path of token -> weth
+        address[] memory path = new address[](2);
+        path[0] = _routerInterface.WETH();
+        path[1] = address(this);
+
+        // make the swap
+        _routerInterface.swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
+            0, // accept any amount of Tokens
+            path,
+            deadAddress, // Burn address
+            block.timestamp.add(600)
+        );
+
+        //emit SwapETHForTokens(amount, path);
     }
 
     function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
-        // split the contract balance into halves
-        uint256 half = contractTokenBalance.div(2);
-        uint256 otherHalf = contractTokenBalance.sub(half);
+        // ------------- Auto LP ---------------
+        // LP Token amounts
+        uint256 lpTokens = contractTokenBalance.mul(_lpPercentage).div(100);
+
+        uint256 half = lpTokens.div(2);
+        uint256 otherHalf = lpTokens.sub(half);
 
         // capture the contract's current ETH balance.
         // this is so that we can capture exactly the amount of ETH that the
@@ -225,62 +270,34 @@ contract Contender is Context, IERC20, Privileged {
         addLiquidity(otherHalf, newBalance);
 
         emit SwapAndLiquify(half, newBalance, otherHalf);
-    }
 
-    function _feeSwap(uint256 amount) private {
+        // ------------- Prize ---------------
 
-        _taxOn = false; //stops recurssion
+        uint256 giveAwayTokens = contractTokenBalance.mul(_prizePoolPercentage).div(100);
 
-        //@dev calc how many tokens we need to sell
-
-        uint256 tokenBal = amount;
-
-        uint256 tokensForLP = tokenBal.div(_lpTokensDivider);
-
-        uint256 tokensToSell = tokenBal.sub(tokensForLP);
-
-        _approve(address(this), _router, tokenBal);
-
-        //@dev sell tokens for BNB
-                
-        _routerInterface.swapExactTokensForETHSupportingFeeOnTransferTokens(
-        tokensToSell,
-        0,
-        _wbnbPath,
-        address(this),
-        block.timestamp
-        );
-
-        uint256 bnbBalance = address(this).balance;
-
-        //@dev add liquidity
-
-        uint256 bnbForLP = bnbBalance.mul(_lpShare).div(10000);
+        _routerInterface.swapExactETHForTokens{value: giveAwayTokens} (0,_busdPath, _arenaManager, block.timestamp + 300);
         
-        addLiquidity(tokensForLP, bnbForLP);
-
-        //_routerInterface.addLiquidityETH{value: bnbForLP}(
-        //address(this),
-        //tokensForLP,
-        //0,
-        //0,
-        //_marketingWallet,
-        //block.timestamp //maybe need to add some?
-        //);
-
-        uint256 bnbToBUSD = bnbBalance.mul(_prizePoolShare).div(10000);
-
-        _routerInterface.swapExactETHForTokens{value: bnbToBUSD}(
-        0,
-        _busdPath,
-        _arenaManager,
-        block.timestamp + 300);
-
-        _arenaManager.transfer(bnbBalance.mul(_amShare).div(10000)); //send money to arena manager
         
-        _marketingWallet.transfer(address(this).balance); //send remaining to marketing
+        // ------------- Middleman ---------------
+        uint256 middleManTokens = contractTokenBalance.mul(_mmPercentage).div(100);
+        initialBalance = address(this).balance;
+
+        swapTokensForEth(middleManTokens);
+
+        newBalance = address(this).balance.sub(initialBalance);
         
-        _taxOn = true;
+        _arenaManager.transfer(newBalance);
+
+        // ------------- Marketing ---------------
+        uint256 marketingTokens = contractTokenBalance.sub(lpTokens).sub(giveAwayTokens).sub(middleManTokens);
+
+        initialBalance = address(this).balance;
+
+        swapTokensForEth(marketingTokens);
+
+        newBalance = address(this).balance.sub(initialBalance);
+        
+        _marketingWallet.transfer(newBalance);
     }
 
     function addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
@@ -336,7 +353,7 @@ contract Contender is Context, IERC20, Privileged {
         if (recipient == _pair && balanceOf(address(this)) >= _minTokensForSwap && swapAndLiqEnabled) {
 
             uint256 swapAmount = _minTokensForSwap;
-            _feeSwap(swapAmount);
+            swapAndLiquify(swapAmount);
         }
 
         _balances[recipient] = _balances[recipient].add(amount);

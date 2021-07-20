@@ -102,10 +102,10 @@ describe("Versus Tests Second", function() {
 
         const taxShares = await this.redContract.getTaxShares();
 
-        expect(await taxShares[0]).to.equal(5555);
-        expect(await taxShares[1]).to.equal(2222);
-        expect(await taxShares[2]).to.equal(1111);
-        expect(await taxShares[3]).to.equal(1111);
+        expect(await taxShares[0]).to.equal(50);
+        expect(await taxShares[1]).to.equal(20);
+        expect(await taxShares[2]).to.equal(20);
+        expect(await taxShares[3]).to.equal(10);
 
         await this.redContract.changeTaxShares(1, 2, 3, 4);
 
@@ -117,15 +117,17 @@ describe("Versus Tests Second", function() {
         expect(await taxSharesChanged[3]).to.equal(4);
     });
 
-    // it("Check able to add liquidity", async function () {
-    //     const amountTokenLP = 1000000 * 10**9;
+    it("Check able to add liquidity", async function () {
+        const amountTokenLP = 1000000 * 10**9;
 
-    //     prov = ethers.getDefaultProvider();
+        prov = ethers.getDefaultProvider();
 
-    //     const amountBNBLP = await (prov.getBalance(this.redDeployer.address) / 1000);
+        const amountBNBLP = await (prov.getBalance(this.redDeployer.address) / 1000);
         
-    //     this.redContract.addLiquidity(amountTokenLP, amountBNBLP);
-    //     //this.psRouterContract.swapExactETHForTokensSupportingFeeOnTransferTokens()
-    // });
+        this.psRouterContract.addLiquidityETH(this.redAddress, amount)
+
+        this.redContract.addLiquidity(amountTokenLP, amountBNBLP);
+        //this.psRouterContract.swapExactETHForTokensSupportingFeeOnTransferTokens()
+    });
 });
 
