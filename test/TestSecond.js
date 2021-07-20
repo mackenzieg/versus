@@ -117,17 +117,126 @@ describe("Versus Tests Second", function() {
         expect(await taxSharesChanged[3]).to.equal(4);
     });
 
-    it("Check able to add liquidity", async function () {
+    it("Check able to add initial liquidity", async function () {
         const amountTokenLP = 1000000 * 10**9;
         const amountBNBLP = BigInt(10000000000000000000); // 10 BNB
 
-        console.log(amountTokenLP);
-        console.log(amountBNBLP);
-        
-        //this.psRouterContract.addLiquidityETH(this.redAddress, amount)
+        const now = new Date().getTime();
 
-        await this.redContract.addLiquidity(amountTokenLP, amountBNBLP);
-        //this.psRouterContract.swapExactETHForTokensSupportingFeeOnTransferTokens()
+        await this.redContract.connect(this.redDeployer).approve(this.psRouterAddress, amountTokenLP);
+        await this.psRouterContract.connect(this.redDeployer).addLiquidityETH(this.redAddress, amountTokenLP, 0, 0, this.redDeployer.address, now + 300, {value: amountBNBLP});
+
+    });
+
+    it("Check if buying with tax off works", async function () {
+
+      //Add Liquidity
+
+      const amountTokenLP = 1000000 * 10**9;
+      const amountBNBLP = BigInt(10000000000000000000); // 10 BNB
+
+      const now = new Date().getTime();
+
+      await this.redContract.connect(this.redDeployer).approve(this.psRouterAddress, amountTokenLP);
+      await this.psRouterContract.connect(this.redDeployer).addLiquidityETH(this.redAddress, amountTokenLP, 0, 0, this.redDeployer.address, now + 300, {value: amountBNBLP});
+
+      //Buy 1BNB worth on 10 accounts
+
+      const toBuy = BigInt(1000000000000000000); // 1 BNB
+
+      const path = [this.wbnbAddress, this.redAddress];
+
+      for (const account of this.signers.slice(10)) {
+
+        expect(await this.redContract.balanceOf(account.address) == 0);
+
+        const now = new Date().getTime();
+
+        await this.psRouterContract.connect(account).swapExactETHForTokensSupportingFeeOnTransferTokens(0, path, account.address, now + 300, {value: toBuy});
+
+        expect(await this.redContract.balanceOf(account.address) > 0);
+      }
+
+    });
+
+    it("Check if buying with tax on works", async function () {
+
+      //Add Liquidity
+
+      const amountTokenLP = 1000000 * 10**9;
+      const amountBNBLP = BigInt(10000000000000000000); // 10 BNB
+
+      const now = new Date().getTime();
+
+      await this.redContract.connect(this.redDeployer).approve(this.psRouterAddress, amountTokenLP);
+      await this.psRouterContract.connect(this.redDeployer).addLiquidityETH(this.redAddress, amountTokenLP, 0, 0, this.redDeployer.address, now + 300, {value: amountBNBLP});
+
+      //Enable tax
+
+      await this.redContract.connect(this.redDeployer).setTax(true);
+
+      //Buy 1BNB worth on 10 accounts
+
+      const toBuy = BigInt(1000000000000000000); // 1 BNB
+
+      const path = [this.wbnbAddress, this.redAddress];
+
+      for (const account of this.signers.slice(10)) {
+
+        expect(await this.redContract.balanceOf(account.address) == 0);
+
+        const now = new Date().getTime();
+
+        await this.psRouterContract.connect(account).swapExactETHForTokensSupportingFeeOnTransferTokens(0, path, account.address, now + 300, {value: toBuy});
+
+        expect(await this.redContract.balanceOf(account.address) > 0);
+      }
+
+    });
+
+    it("Check if correct total tax is taken", async function () {
+
+      //Add Liquidity
+
+      const amountTokenLP = 1000000 * 10**9;
+      const amountBNBLP = BigInt(10000000000000000000); // 10 BNB
+
+      const now = new Date().getTime();
+
+      await this.redContract.connect(this.redDeployer).approve(this.psRouterAddress, amountTokenLP);
+      await this.psRouterContract.connect(this.redDeployer).addLiquidityETH(this.redAddress, amountTokenLP, 0, 0, this.redDeployer.address, now + 300, {value: amountBNBLP});
+
+      //Enable tax
+
+      await this.redContract.connect(this.redDeployer).setTax(true);
+
+      //Buy 1BNB worth on 10 accounts
+
+      const toBuy = BigInt(1000000000000000000); // 1 BNB
+
+      const path = [this.wbnbAddress, this.redAddress];
+
+      let tokensBought = BigInt(0);
+
+      for (const account of this.signers.slice(10)) {
+
+        expect(await this.redContract.balanceOf(account.address) == 0);
+
+        const now = new Date().getTime();
+
+        await this.psRouterContract.connect(account).swapExactETHForTokensSupportingFeeOnTransferTokens(0, path, account.address, now + 300, {value: toBuy});
+
+        expect(await this.redContract.balanceOf(account.address) > 0);
+
+        tokensBought += BigInt(await this.redContract.balanceOf(account.address));
+      }
+
+      let contractTokens = BigInt(await this.redContract.balanceOf(this.redAddress));
+
+      let taxAmount = await this.redContract.getTaxes();
+
+      expect(((tokensBought+contractTokens) / contractTokens) == (100 / taxAmount));
+
     });
     //await expectRevert.unspecified(scamToken.connect(secondComer).airdropTokens(secondComer.address));
 // https://dev.to/steadylearner/how-to-test-a-bep20-token-with-hardhat-and-not-get-scamed-5bjj

@@ -60,7 +60,7 @@ contract Contender is Context, IERC20, Privileged {
     address payable private _dividendTracker;
     IDividendPayingToken private DT;
     
-    address private _pair = address(0);
+    address public _pair = address(0);
     address private _router;
     address private _wbnb;
     address private _busd;
@@ -109,8 +109,8 @@ contract Contender is Context, IERC20, Privileged {
         _routerInterface = IPancakeRouter02(router);
 
         IPancakeFactory pcFactory = IPancakeFactory(_routerInterface.factory());
-        address pair = pcFactory.createPair(address(this), _routerInterface.WETH());
-        _pairInterface = IPancakePair(pair);
+        _pair = pcFactory.createPair(address(this), _wbnb);
+        _pairInterface = IPancakePair(_pair);
 
         AM = IArenaManager(arenaManager);
         DT = IDividendPayingToken(dividendTracker);
@@ -126,6 +126,10 @@ contract Contender is Context, IERC20, Privileged {
         inSwapAndLiquify = true;
         _;
         inSwapAndLiquify = false;
+    }
+
+    function getPair() public view returns (address) {
+        return _pair;
     }
 
     function setDividendTracker(address payable dividendTracker) external onlyPriviledged() {
