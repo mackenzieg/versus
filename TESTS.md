@@ -4,7 +4,8 @@ Osama:
 - [ ] Make sure permissions between all contracts is working
 
 Mackenzie:
-- [ ] Make sure taxes are correct and can be changed
+- [x] Make sure taxes are correct and can be changed
+- [x] Make sure fees are taken
 - [ ] Make sure mm gets 1% in BNB
 - [ ] Make sure marketing gets 2% BNB
 - [ ] Make sure mm gets 5% in BUSD

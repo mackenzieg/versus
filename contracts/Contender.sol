@@ -40,12 +40,12 @@ contract Contender is Context, IERC20, Privileged {
    
     uint256 private constant _total = 10**9 * 10**9; //1B Total Supply
 
-    uint256 public _taxAmount = 0;
+    uint256 public _taxAmount = 10;
 
     //@dev 5% prize pool, 2% auto-lp, 2% marketing, 1% arena manager. weird math to fit all fees into one swap.
 
     uint256 private _prizePoolShare = 5555; 
-    //uint256 private _marketingShare = 2222;
+    uint256 private _marketingShare = 2222;
     uint256 private _lpShare = 1111;
     uint256 private _lpTokensDivider = 10;
     uint256 private _amShare = 1111;
@@ -60,7 +60,6 @@ contract Contender is Context, IERC20, Privileged {
 
     address payable private _dividendTracker;
     IDividendPayingToken private DT;
-    
     
     address private _pair = address(0);
     address private _router;
@@ -132,15 +131,24 @@ contract Contender is Context, IERC20, Privileged {
         _excluded[addr] = false;
     }
 
-    function changeTaxShares(uint256 pp, uint256 lp, uint256 am) external onlyPriviledged() {
+    function getTaxShares() public view returns(uint256, uint256, uint256, uint256) {
+        return (_prizePoolShare, _marketingShare, _lpShare, _amShare);
+    }
+
+    function changeTaxShares(uint256 pp, uint256 ms, uint256 lp, uint256 am) external onlyPriviledged() {
         _prizePoolShare = pp; 
+        _marketingShare = ms;
         _lpShare = lp;
         _amShare = am;
     }
     
     function changeTax(uint256 taxVal) external onlyPriviledged() {
-        require(taxVal <= 30 && taxVal >= 0, "New tax value must be between 0 and 30.");
+        require(taxVal <= 45 && taxVal >= 0, "New tax value must be between 0 and 45.");
         _taxAmount = taxVal;
+    }
+
+    function getTaxes() public view returns (uint256) {
+        return _taxAmount;
     }
     
     function changeArenaManager(address payable arenaManager) external onlyPriviledged() {
@@ -212,15 +220,17 @@ contract Contender is Context, IERC20, Privileged {
         //@dev add liquidity
 
         uint256 bnbForLP = bnbBalance.mul(_lpShare).div(10000);
+        
+        addLiquidity(tokensForLP, bnbForLP);
 
-        _routerInterface.addLiquidityETH{value: bnbForLP}(
-        address(this),
-        tokensForLP,
-        0,
-        0,
-        _marketingWallet,
-        block.timestamp //maybe need to add some?
-        );
+        //_routerInterface.addLiquidityETH{value: bnbForLP}(
+        //address(this),
+        //tokensForLP,
+        //0,
+        //0,
+        //_marketingWallet,
+        //block.timestamp //maybe need to add some?
+        //);
 
         uint256 bnbToBUSD = bnbBalance.mul(_prizePoolShare).div(10000);
 
@@ -237,6 +247,20 @@ contract Contender is Context, IERC20, Privileged {
         _taxOn = true;
     }
 
+    function addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
+        // approve token transfer to cover all possible scenarios
+        _approve(address(this), address(_routerInterface), tokenAmount);
+
+        // add the liquidity
+        _routerInterface.addLiquidityETH{value: ethAmount} (
+            address(this),
+            tokenAmount,
+            0, // slippage is unavoidable
+            0, // slippage is unavoidable
+            owner(),
+            block.timestamp
+        );
+    }
 
     //@dev custom transfer and approve funcs
 
