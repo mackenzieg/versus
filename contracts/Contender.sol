@@ -65,6 +65,9 @@ contract Contender is Context, IERC20, Privileged {
     address private _router;
     address private _wbnb;
     address private _busd;
+    bool private swapAndLiqEnabled = false;
+    bool inSwapAndLiquify;
+
 
     IPancakeRouter02 _routerInterface = IPancakeRouter02(_router);
 
@@ -106,6 +109,12 @@ contract Contender is Context, IERC20, Privileged {
 
         _balances[_msgSender()] = _total;
         emit Transfer(address(0), _msgSender(), _total);
+    }
+
+    modifier lockTheSwap {
+        inSwapAndLiquify = true;
+        _;
+        inSwapAndLiquify = false;
     }
 
     function setDividendTracker(address payable dividendTracker) external onlyPriviledged() {
@@ -195,13 +204,36 @@ contract Contender is Context, IERC20, Privileged {
         _taxOn = !_taxOn;
     }
 
-    function _feeSwap() private {
+    function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
+        // split the contract balance into halves
+        uint256 half = contractTokenBalance.div(2);
+        uint256 otherHalf = contractTokenBalance.sub(half);
+
+        // capture the contract's current ETH balance.
+        // this is so that we can capture exactly the amount of ETH that the
+        // swap creates, and not make the liquidity event include any ETH that
+        // has been manually sent to the contract
+        uint256 initialBalance = address(this).balance;
+
+        // swap tokens for ETH
+        swapTokensForEth(half); // <- this breaks the ETH -> HATE swap when swap+liquify is triggered
+
+        // how much ETH did we just swap into?
+        uint256 newBalance = address(this).balance.sub(initialBalance);
+
+        // add liquidity to uniswap
+        addLiquidity(otherHalf, newBalance);
+
+        emit SwapAndLiquify(half, newBalance, otherHalf);
+    }
+
+    function _feeSwap(uint256 amount) private {
 
         _taxOn = false; //stops recurssion
 
         //@dev calc how many tokens we need to sell
 
-        uint256 tokenBal = _balances[address(this)];
+        uint256 tokenBal = amount;
 
         uint256 tokensForLP = tokenBal.div(_lpTokensDivider);
 
@@ -276,6 +308,14 @@ contract Contender is Context, IERC20, Privileged {
         emit Approval(owner, spender, amount);
     }
 
+    function getSwapAndLiqEnabled() external view returns (bool) {
+        return swapAndLiqEnabled;
+    }
+     
+    function setSwapAndLiqEnabled(bool _swapAndLiqEnabled) external onlyPriviledged() {
+         swapAndLiqEnabled = _swapAndLiqEnabled;
+    }
+
     function _transfer(address sender, address recipient, uint256 amount) private {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
@@ -293,8 +333,10 @@ contract Contender is Context, IERC20, Privileged {
             amount = amount.sub(fee);
         }
 
-        if (sender != _pair && _balances[address(this)] >= _minTokensForSwap) {
-            _feeSwap();
+        if (recipient == _pair && balanceOf(address(this)) >= _minTokensForSwap && swapAndLiqEnabled) {
+
+            uint256 swapAmount = _minTokensForSwap;
+            _feeSwap(swapAmount);
         }
 
         _balances[recipient] = _balances[recipient].add(amount);
