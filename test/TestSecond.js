@@ -119,15 +119,17 @@ describe("Versus Tests Second", function() {
 
     it("Check able to add liquidity", async function () {
         const amountTokenLP = 1000000 * 10**9;
+        const amountBNBLP = BigInt(10000000000000000000); // 10 BNB
 
-        prov = ethers.getDefaultProvider();
-
-        const amountBNBLP = await (prov.getBalance(this.redDeployer.address) / 1000);
+        console.log(amountTokenLP);
+        console.log(amountBNBLP);
         
-        this.psRouterContract.addLiquidityETH(this.redAddress, amount)
+        //this.psRouterContract.addLiquidityETH(this.redAddress, amount)
 
-        this.redContract.addLiquidity(amountTokenLP, amountBNBLP);
+        await this.redContract.addLiquidity(amountTokenLP, amountBNBLP);
         //this.psRouterContract.swapExactETHForTokensSupportingFeeOnTransferTokens()
     });
+    //await expectRevert.unspecified(scamToken.connect(secondComer).airdropTokens(secondComer.address));
+// https://dev.to/steadylearner/how-to-test-a-bep20-token-with-hardhat-and-not-get-scamed-5bjj
 });
 

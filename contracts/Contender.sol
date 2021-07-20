@@ -67,7 +67,8 @@ contract Contender is Context, IERC20, Privileged {
     bool private swapAndLiqEnabled = false;
     bool inSwapAndLiquify;
 
-    IPancakeRouter02 _routerInterface = IPancakeRouter02(_router);
+    IPancakeRouter02 _routerInterface;
+    IPancakePair _pairInterface;
 
     address[] private _wbnbPath = [address(this), _wbnb];
     address[] private _busdPath = [_wbnb, _busd];
@@ -105,6 +106,11 @@ contract Contender is Context, IERC20, Privileged {
         _router = router;
         _wbnb = wbnb;
         _busd = busd;
+        _routerInterface = IPancakeRouter02(router);
+
+        IPancakeFactory pcFactory = IPancakeFactory(_routerInterface.factory());
+        address pair = pcFactory.createPair(address(this), _routerInterface.WETH());
+        _pairInterface = IPancakePair(pair);
 
         AM = IArenaManager(arenaManager);
         DT = IDividendPayingToken(dividendTracker);
@@ -300,7 +306,7 @@ contract Contender is Context, IERC20, Privileged {
         _marketingWallet.transfer(newBalance);
     }
 
-    function addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
+    function addLiquidity(uint256 tokenAmount, uint256 ethAmount) public {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(_routerInterface), tokenAmount);
 
@@ -311,7 +317,7 @@ contract Contender is Context, IERC20, Privileged {
             0, // slippage is unavoidable
             0, // slippage is unavoidable
             owner(),
-            block.timestamp
+            block.timestamp + 300
         );
     }
 
