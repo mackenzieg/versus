@@ -117,15 +117,15 @@ describe("Versus Tests Second", function() {
         expect(await taxSharesChanged[3]).to.equal(4);
     });
 
-    it("Check able to add liquidity", async function () {
-        const amountTokenLP = 1000000 * 10**9;
+    // it("Check able to add liquidity", async function () {
+    //     const amountTokenLP = 1000000 * 10**9;
 
-        prov = ethers.getDefaultProvider();
+    //     prov = ethers.getDefaultProvider();
 
-        const amountBNBLP = await (prov.getBalance(this.redDeployer.address) / 1000);
+    //     const amountBNBLP = await (prov.getBalance(this.redDeployer.address) / 1000);
         
-        this.redContract.addLiquidity(amountTokenLP, amountBNBLP);
-        //this.psRouterContract.swapExactETHForTokensSupportingFeeOnTransferTokens()
-    });
+    //     this.redContract.addLiquidity(amountTokenLP, amountBNBLP);
+    //     //this.psRouterContract.swapExactETHForTokensSupportingFeeOnTransferTokens()
+    // });
 });
 

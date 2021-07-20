@@ -98,6 +98,14 @@ contract ArenaManager is Privileged, IArenaManager {
         updatePriviledged(red, blue);
     }
 
+    function getRedContender() external view returns (address) {
+        return _red;
+    }
+
+    function getBlueContender() external view returns (address) {
+        return _blue;
+    }
+
     function setRedTeamAdvanatage(uint256 time) external onlyPriviledged() {
       STATUS.redTeamAdvantage = true;
       STATUS.redTeamAdvantageTime = block.timestamp + time;

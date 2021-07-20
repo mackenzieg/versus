@@ -119,7 +119,7 @@ contract Contender is Context, IERC20, Privileged {
         DT.excludeFromDividends(deadAddress);
     }
 
-    function getDividendTrackerContract() external returns (address payable) {
+    function getDividendTrackerContract() external view returns (address payable) {
         return _dividendTracker;
     }
 
@@ -158,6 +158,10 @@ contract Contender is Context, IERC20, Privileged {
         updatePriviledged(_arenaManager, _dividendTracker);
 
         DT.excludeFromDividends(arenaManager);
+    }
+
+    function getArenaManager() external view returns (address) {
+        return _arenaManager;
     }
 
     function changeMinTokensForSwap(uint256 newMin) external onlyPriviledged() {

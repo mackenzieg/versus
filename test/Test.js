@@ -83,14 +83,24 @@ describe("Versus Tests", function() {
         this.arenaManagerContract.changeContenders(this.redAddress, this.blueAddress);
     });
 
-    // Checks linking between dividend, mm and conteder
-    //it("Check network mappings", async function () {
-    //    // Contender is linked to Dividend contract
-    //    console.log(await this.redContract.getDividendTrackerContract());
-    //    console.log("asdasd");
-    //    expect(await this.redContract.getDividendTrackerContract()).to.equal(this.redDividendTrackerContract.address);
-    //    //expect(await this.blueContract.getDividendTrackerContract()).to.equal(this.blueDividendTrackerAddress);
-    //});
+    // Checks linking between dividend and conteder
+    it("Check link Tracker-Contender", async function () {
+       // Contender is linked to Dividend contract
+       expect(await this.redContract.getDividendTrackerContract()).to.equal(this.redDividendTrackerContract.address);
+       expect(await this.blueContract.getDividendTrackerContract()).to.equal(this.blueDividendTrackerContract.address);
+    });
+
+    // Checks linking between mm and conteder
+    it("Check link MM-Contender", async function () {
+      // Contender is linked to Dividend contract
+      expect(await this.arenaManagerContract.getRedContender()).to.equal(this.redContract.address);
+      expect(await this.arenaManagerContract.getBlueContender()).to.equal(this.blueContract.address);
+      expect(await this.redContract.getArenaManager()).to.equal(this.arenaManagerContract.address);
+      expect(await this.blueContract.getArenaManager()).to.equal(this.arenaManagerContract.address);
+
+   });
+
+
 
     // Check number of tokens held
     it("Check number of tokens held by owner", async function () {
