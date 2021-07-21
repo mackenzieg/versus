@@ -62,8 +62,8 @@ describe("Versus Tests", function() {
             }
           }, this.redDeployer);
 
-        this.redDividendTrackerContract = await this.redDividendTrackerGenerator.deploy("RedDividendTracker", "RDT");
-        this.blueDividendTrackerContract = await this.blueDividendTrackerGenerator.deploy("BlueDividendTracker", "BDT");
+        this.redDividendTrackerContract = await this.redDividendTrackerGenerator.deploy("RedDividendTracker", "RDT", this.busdAddress);
+        this.blueDividendTrackerContract = await this.blueDividendTrackerGenerator.deploy("BlueDividendTracker", "BDT", this.busdAddress);
 
         this.redDividendTrackerAddress = this.redDividendTrackerContract.address;
         this.blueDividendTrackerAddress = this.blueDividendTrackerContract.address;

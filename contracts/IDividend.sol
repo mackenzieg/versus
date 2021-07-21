@@ -34,6 +34,8 @@ interface IDividendPayingToken {
   ///  MUST emit a `DividendsDistributed` event when the amount of distributed ether is greater than 0.
   function distributeDividends() external payable;
 
+  function distributeBusdDividends(uint256 amount) external;
+
   /// @notice Withdraws the ether distributed to the sender.
   /// @dev SHOULD transfer `dividendOf(msg.sender)` wei to `msg.sender`, and `dividendOf(msg.sender)` SHOULD be 0 after the transfer.
   ///  MUST emit a `DividendWithdrawn` event if the amount of ether transferred is greater than 0.

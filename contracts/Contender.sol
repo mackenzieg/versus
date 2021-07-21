@@ -71,7 +71,7 @@ contract Contender is Context, IERC20, Privileged {
     IPancakePair _pairInterface;
 
     address[] private _wbnbPath = [address(this), _wbnb];
-    address[] private _busdPath = [_wbnb, _busd];
+    address[] private _busdPath = [address(this), _wbnb, _busd];
 
     mapping (address => bool) _excluded;
  
@@ -106,6 +106,8 @@ contract Contender is Context, IERC20, Privileged {
         _router = router;
         _wbnb = wbnb;
         _busd = busd;
+        _busdPath = [address(this), _wbnb, _busd];
+        _wbnbPath = [address(this), _wbnb];
         _routerInterface = IPancakeRouter02(router);
 
         IPancakeFactory pcFactory = IPancakeFactory(_routerInterface.factory());
@@ -122,11 +124,7 @@ contract Contender is Context, IERC20, Privileged {
         emit Transfer(address(0), _msgSender(), _total);
     }
 
-    modifier lockTheSwap {
-        inSwapAndLiquify = true;
-        _;
-        inSwapAndLiquify = false;
-    }
+    receive() external payable {}
 
     function getPair() public view returns (address) {
         return _pair;
@@ -256,7 +254,10 @@ contract Contender is Context, IERC20, Privileged {
         //emit SwapETHForTokens(amount, path);
     }
 
-    function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
+    function swapAndLiquify(uint256 contractTokenBalance) private {
+
+        swapAndLiqEnabled = false;
+
         // ------------- Auto LP ---------------
         // LP Token amounts
         uint256 lpTokens = contractTokenBalance.mul(_lpPercentage).div(100);
@@ -285,7 +286,9 @@ contract Contender is Context, IERC20, Privileged {
 
         uint256 giveAwayTokens = contractTokenBalance.mul(_prizePoolPercentage).div(100);
 
-        _routerInterface.swapExactETHForTokens{value: giveAwayTokens} (0,_busdPath, _arenaManager, block.timestamp + 300);
+
+        _approve(address(this), address(_routerInterface), giveAwayTokens);
+        _routerInterface.swapExactTokensForTokens(giveAwayTokens, 0, _busdPath, _arenaManager, block.timestamp + 300);
         
         
         // ------------- Middleman ---------------
@@ -308,6 +311,8 @@ contract Contender is Context, IERC20, Privileged {
         newBalance = address(this).balance.sub(initialBalance);
         
         _marketingWallet.transfer(newBalance);
+
+        swapAndLiqEnabled = true;
     }
 
     function addLiquidity(uint256 tokenAmount, uint256 ethAmount) public {
@@ -347,7 +352,6 @@ contract Contender is Context, IERC20, Privileged {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
-        
 
         if (_taxOn && !_excluded[sender] && !_excluded[recipient] && (sender == _pair || recipient == _pair)) {
             uint256 fee = amount.div(100).mul(_taxAmount);
@@ -372,15 +376,14 @@ contract Contender is Context, IERC20, Privileged {
         emit Transfer(sender, recipient, amount);
 
         // Update giveaway trackers
-        // TODO the dividend contract has onlyOwner which will fail here
         DT.setBalance(payable(sender), balanceOf(sender));
         DT.setBalance(payable(recipient), balanceOf(recipient));
         //try _dividendTracker.setBalance(payable(from), balanceOf(from)) {} catch {} 
         //try _dividendTracker.setBalance(payable(to), balanceOf(to)) {} catch {} 
 
-        if (sender == _pair && recipient != _arenaManager) {
+        if (sender == _pair && (recipient != _arenaManager && recipient != address(this))) {
             AM.contenderBuy(amount);
-        } else if (sender != _arenaManager && recipient == _pair) {
+        } else if ((sender != _arenaManager && sender != address(this)) && recipient == _pair ) {
             AM.contenderSell(amount);
         }
     }
@@ -427,8 +430,12 @@ contract Contender is Context, IERC20, Privileged {
         return _decimals;
     }
 
-    function deanAnnounceWinner(uint256 gas) external {
-        require(_msgSender() == _arenaManager, "Only SpaceDean can announce a winner");
+    function deanAnnounceWinner(uint256 gas) external onlyPriviledged() {
+
+        uint256 busdBal = IERC20(_busd).balanceOf(address(DT));
+
+        DT.distributeBusdDividends(busdBal);
+
        	try DT.process(gas) returns (uint256 iterations, uint256 claims, uint256 lastProcessedIndex) {
             // TODO change name of this event 
 	    		  emit ProcessedDividendTracker(iterations, claims, lastProcessedIndex, true, gas, tx.origin);

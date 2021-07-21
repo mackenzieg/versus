@@ -13,12 +13,12 @@ describe("Versus Tests Second", function() {
 
         this.WBNB = await hre.ethers.getContractFactory("WBNB");
 
-        this.BUSD = await hre.ethers.getContractFactory("BUSD");
+        this.BUSD = await hre.ethers.getContractFactory("BUSD", this.psDeployer);
 
         this.psFactory = await hre.ethers.getContractFactory("PancakeFactory", this.psDeployer);
         this.psRouter = await hre.ethers.getContractFactory("PancakeRouter", this.psDeployer);
         this.uniswapV2Locker = await hre.ethers.getContractFactory('UniswapV2Locker', this.psDeployer);
-        this.arenaManager = await ethers.getContractFactory('ArenaManager', this.arenaManager);
+        this.arenaManager = await ethers.getContractFactory('ArenaManager', this.arenaDeployer);
         this.redIterableMapping = await ethers.getContractFactory('IterableMapping', this.redDeployer);
         this.blueIterableMapping = await ethers.getContractFactory('IterableMapping', this.blueDeployer);
 
@@ -62,8 +62,8 @@ describe("Versus Tests Second", function() {
             }
           }, this.redDeployer);
 
-        this.redDividendTrackerContract = await this.redDividendTrackerGenerator.deploy("RedDividendTracker", "RDT");
-        this.blueDividendTrackerContract = await this.blueDividendTrackerGenerator.deploy("BlueDividendTracker", "BDT");
+        this.redDividendTrackerContract = await this.redDividendTrackerGenerator.deploy("RedDividendTracker", "RDT", this.busdAddress);
+        this.blueDividendTrackerContract = await this.blueDividendTrackerGenerator.deploy("BlueDividendTracker", "BDT", this.busdAddress);
 
         this.redDividendTrackerAddress = this.redDividendTrackerContract.address;
         this.blueDividendTrackerAddress = this.blueDividendTrackerContract.address;
@@ -77,10 +77,24 @@ describe("Versus Tests Second", function() {
         this.redDividendTrackerContract.setContender(this.redAddress);
         this.blueDividendTrackerContract.setContender(this.blueAddress);
 
-        this.redContract.setDividendTracker(this.redDividendTrackerAddress);
-        this.blueContract.setDividendTracker(this.blueDividendTrackerAddress);
+        await this.redContract.setDividendTracker(this.redDividendTrackerAddress);
+        await this.blueContract.setDividendTracker(this.blueDividendTrackerAddress);
 
         this.arenaManagerContract.changeContenders(this.redAddress, this.blueAddress);
+
+        await this.busdContract.connect(this.psDeployer).mint('1000000000000000000000000'); //mint $1m
+
+        let deployTime = new Date().getTime();
+
+        //add 1m BUSD and 100 BNB to BUSD/BNB liquidity 
+        await this.busdContract.connect(this.psDeployer).approve(this.psRouterAddress, '1000000000000000000000000');
+        await this.psRouterContract.connect(this.psDeployer).addLiquidityETH(this.busdAddress, '1000000000000000000000000', 0, 0, this.psDeployer.address, deployTime + 1000, {value: '100000000000000000000'});
+
+        await this.redContract.connect(this.redDeployer).addExcluded(this.arenaManagerAddress);
+        await this.blueContract.connect(this.blueDeployer).addExcluded(this.arenaManagerAddress);
+        await this.redContract.connect(this.redDeployer).addExcluded(this.redAddress);
+        await this.blueContract.connect(this.blueDeployer).addExcluded(this.blueAddress);
+
     });
 
     // Checks linking between dividend, mm and conteder
@@ -236,6 +250,125 @@ describe("Versus Tests Second", function() {
       let taxAmount = await this.redContract.getTaxes();
 
       expect(((tokensBought+contractTokens) / contractTokens) == (100 / taxAmount));
+
+    });
+
+    it("Check if buying/selling works with AM + Tax", async function () {
+
+      //Add Liquidity
+
+      const amountTokenLP = BigInt("100000000000000000");
+      const amountBNBLP = BigInt(10000000000000000000); // 10 BNB
+
+      const now = new Date().getTime();
+
+      await this.redContract.connect(this.redDeployer).approve(this.psRouterAddress, amountTokenLP);
+      await this.psRouterContract.connect(this.redDeployer).addLiquidityETH(this.redAddress, amountTokenLP, 0, 0, this.redDeployer.address, now + 300, {value: amountBNBLP});
+
+      await this.blueContract.connect(this.blueDeployer).approve(this.psRouterAddress, amountTokenLP);
+      await this.psRouterContract.connect(this.blueDeployer).addLiquidityETH(this.blueAddress, amountTokenLP, 0, 0, this.blueDeployer.address, now + 300, {value: amountBNBLP});
+
+      //Send tokens to AM
+
+      await this.redContract.connect(this.redDeployer).transfer(this.arenaManagerAddress, amountTokenLP);
+      await this.blueContract.connect(this.blueDeployer).transfer(this.arenaManagerAddress, amountTokenLP);
+
+      //Enable AM
+
+      await this.arenaManagerContract.connect(this.arenaDeployer).changeAMEnable(true);
+
+      //Enable Giveaway
+
+      await this.arenaManagerContract.connect(this.arenaDeployer).changeGiveawayEnable(true);
+
+      //Enable tax
+
+      await this.redContract.connect(this.redDeployer).setTax(true);
+
+      //Enable swap and liq
+
+      await this.redContract.connect(this.redDeployer).setSwapAndLiqEnabled(true);
+
+      //Buy 1BNB worth on 10 accounts
+
+      const toBuy = BigInt(1000000000000000000); // 1 BNB
+
+      let path = [this.wbnbAddress, this.redAddress];
+
+      for (const account of this.signers.slice(5)) {
+
+        expect(await this.redContract.balanceOf(account.address) == 0);
+
+        const now = new Date().getTime();
+
+        await this.psRouterContract.connect(account).swapExactETHForTokensSupportingFeeOnTransferTokens(0, path, account.address, now + 300, {value: toBuy});
+
+        expect(await this.redContract.balanceOf(account.address) > 0);
+
+      }
+
+      path = [this.redAddress, this.wbnbAddress];
+
+      for (const account of this.signers.slice(5)) {
+
+        const toSell = await this.redContract.balanceOf(account.address);
+
+        const now = new Date().getTime();
+
+        await this.redContract.connect(account).approve(this.psRouterAddress, toSell);
+        await this.psRouterContract.connect(account).swapExactTokensForETHSupportingFeeOnTransferTokens(toSell, 0, path, account.address, now + 300);
+
+      }
+
+      path = [this.wbnbAddress, this.blueAddress];
+
+      for (const account of this.signers.slice(5)) {
+
+        expect(await this.blueContract.balanceOf(account.address) == 0);
+
+        const now = new Date().getTime();
+
+        await this.psRouterContract.connect(account).swapExactETHForTokensSupportingFeeOnTransferTokens(0, path, account.address, now + 300, {value: toBuy});
+
+        expect(await this.blueContract.balanceOf(account.address) > 0);
+
+      }
+
+      for (const account of this.signers.slice(5)) {
+        console.log(account.address + ' div token bal: ' + await this.blueDividendTrackerContract.balanceOf(account.address))
+      }
+
+      console.log('FORCING GIVEAWAY TO START');
+
+      const compEnd = new Date().getTime();
+
+      await this.arenaManagerContract.connect(this.arenaDeployer).setCurrentCompetitionEndTime(compEnd);
+      await hre.ethers.provider.send('evm_setNextBlockTimestamp', [compEnd]);  //Change network timestamp to match
+
+      path = [this.blueAddress, this.wbnbAddress];
+
+      for (const account of this.signers.slice(5)) {
+
+        console.log('RED DIV BUSD: ' + await this.busdContract.balanceOf(this.redDividendTrackerAddress));
+        console.log('BLUE DIV BUSD: ' + await this.busdContract.balanceOf(this.blueDividendTrackerAddress));
+
+        const toSell = await this.blueContract.balanceOf(account.address);
+
+        const now = new Date().getTime();
+
+        await this.blueContract.connect(account).approve(this.psRouterAddress, toSell);
+        await this.psRouterContract.connect(account).swapExactTokensForETHSupportingFeeOnTransferTokens(toSell, 0, path, account.address, now + 300);
+
+      }
+
+      console.log('RED DIV BUSD: ' + await this.busdContract.balanceOf(this.redDividendTrackerAddress));
+      console.log('BLUE DIV BUSD: ' + await this.busdContract.balanceOf(this.blueDividendTrackerAddress));
+      
+
+      expect(await this.busdContract.balanceOf(this.arenaManagerAddress) > 0); //Check if AM got BUSD from fees
+      expect(await hre.ethers.provider.getBalance(this.arenaManagerAddress) > 0); //Check if AM got BNB from fees
+
+      expect(await this.blueContract.balanceOf(this.arenaManagerAddress) < amountTokenLP); //Check if AM was selling/buying opposite tokens (below initial since starts with no BNB)
 
     });
     //await expectRevert.unspecified(scamToken.connect(secondComer).airdropTokens(secondComer.address));

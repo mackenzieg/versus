@@ -5,6 +5,7 @@ import "./libraries/TransferHelper.sol";
 import "./libraries/IERC20.sol";
 import "./libraries/Privileged.sol";
 import "./libraries/IterableMapping.sol";
+import "hardhat/console.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -632,7 +633,8 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
   uint256 internal magnifiedDividendPerShare;
   uint256 internal lastAmount;
   
-  address public immutable BUSDToken = address(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
+  address public immutable BUSDToken;
+
 
   // About dividendCorrection:
   // If the token balance of a `_user` is never changed, the dividend of `_user` can be computed with:
@@ -650,8 +652,8 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
 
   uint256 public totalDividendsDistributed;
 
-  constructor(string memory _name, string memory _symbol) public ERC20(_name, _symbol) {
-
+  constructor(string memory _name, string memory _symbol, address busd) public ERC20(_name, _symbol) {
+    BUSDToken = busd;
   }
   
 
@@ -685,7 +687,7 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
   }
   
 
-  function distributeBusdDividends(uint256 amount) public {
+  function distributeBusdDividends(uint256 amount) external override {
     require(totalSupply() > 0);
 
     if (amount > 0) {
@@ -708,6 +710,8 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
   /// @dev It emits a `DividendWithdrawn` event if the amount of withdrawn ether is greater than 0.
   function _withdrawDividendOfUser(address payable user) internal returns (uint256) {
     uint256 _withdrawableDividend = withdrawableDividendOf(user);
+    console.log('withdrawableDiv', _withdrawableDividend);
+
     if (_withdrawableDividend > 0) {
       withdrawnDividends[user] = withdrawnDividends[user].add(_withdrawableDividend);
       emit DividendWithdrawn(user, _withdrawableDividend);
@@ -715,11 +719,14 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
 
       if(!success) {
         withdrawnDividends[user] = withdrawnDividends[user].sub(_withdrawableDividend);
+        console.log('Failing first');
         return 0;
       }
 
       return _withdrawableDividend;
     }
+
+    console.log('Failing second');
 
     return 0;
   }
@@ -816,7 +823,7 @@ contract ContesterDividendTracker is DividendPayingToken, Privileged {
 
     mapping (address => bool) public excludedFromDividends;
 
-    mapping (address => uint256) public lastClaimTimes;
+    mapping (address => uint256)  public lastClaimTimes;
 
     uint256 public claimWait;
     uint256 public immutable minimumTokenBalanceForDividends;
@@ -826,9 +833,9 @@ contract ContesterDividendTracker is DividendPayingToken, Privileged {
 
     event Claim(address indexed account, uint256 amount, bool indexed automatic);
 
-    constructor(string memory name, string memory symbol) public DividendPayingToken(name, symbol) {
+    constructor(string memory name, string memory symbol, address busd) public DividendPayingToken(name, symbol, busd) {
         claimWait = 3600;
-        minimumTokenBalanceForDividends = 10 * (10**18); //must hold 10+ tokens
+        minimumTokenBalanceForDividends = 10 * (10**9); //must hold 10+ tokens
     }
 
     function setContender(address payable contender) external onlyPriviledged {
@@ -960,11 +967,16 @@ contract ContesterDividendTracker is DividendPayingToken, Privileged {
     }
 
     function process(uint256 gas) public returns (uint256, uint256, uint256) {
+
+      console.log('PROCESS HIT', gas);
+
     	uint256 numberOfTokenHolders = tokenHoldersMap.keys.length;
 
     	if(numberOfTokenHolders == 0) {
     		return (0, 0, lastProcessedIndex);
     	}
+
+      console.log('passed dead return');
 
     	uint256 _lastProcessedIndex = lastProcessedIndex;
 
@@ -976,6 +988,9 @@ contract ContesterDividendTracker is DividendPayingToken, Privileged {
     	uint256 claims = 0;
 
     	while(gasUsed < gas && iterations < numberOfTokenHolders) {
+
+        console.log('claims done: ' ,claims);
+
     		_lastProcessedIndex++;
 
     		if(_lastProcessedIndex >= tokenHoldersMap.keys.length) {

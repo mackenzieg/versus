@@ -15,6 +15,7 @@ import "./libraries/UQ112x112.sol";
 import "./libraries/IContender.sol";
 import "./BUSD.sol";
 import "./IArenaManager.sol";
+import "hardhat/console.sol";
 
 abstract contract ERC20Interface {
     function balanceOf(address whom) virtual public returns (uint);
@@ -88,6 +89,14 @@ contract ArenaManager is Privileged, IArenaManager {
       STATUS.blueTeamAdvantage = false;
     }
 
+    function changeAMEnable(bool enabled) external onlyPriviledged() {
+        STATUS.arenaManagerEnabled = enabled;
+    }
+
+    function changeGiveawayEnable(bool enabled) external onlyPriviledged() {
+        STATUS.giveawayEnabled = enabled;
+    }
+
     function setMinBalanceRequired(uint256 bal) external onlyPriviledged() {
         minBalanceRequired = bal;
     }
@@ -138,11 +147,37 @@ contract ArenaManager is Privileged, IArenaManager {
       IPancakePair bluePair = IPancakePair(IPancakeFactory(_pr.factory()).getPair(_blue, _wbnb));
 
 
-      (uint112 redToken, uint112 redWBNB, ) = redPair.getReserves();
-      (uint112 blueToken, uint112 blueWBNB, ) = bluePair.getReserves();
+      (uint112 redA, uint112 redB, ) = redPair.getReserves();
+
+
+      uint112 redToken;
+      uint112 redWBNB;
+      uint112 blueToken;
+      uint112 blueWBNB;
+
+      if (redPair.token0() == _red) {
+          redToken = redA;
+          redWBNB = redB;
+      } else {
+          redToken = redB;
+          redWBNB = redA;
+      }
+
+      (uint112 blueA, uint112 blueB, ) = bluePair.getReserves();
+
+      if (bluePair.token0() == _blue) {
+          blueToken = blueA;
+          blueWBNB = blueB;
+      } else {
+          blueToken = blueB;
+          blueWBNB = blueA;
+      }
 
       uint224 redPrice = UQ112x112.encode(redWBNB).uqdiv(redToken);
       uint224 bluePrice = UQ112x112.encode(blueWBNB).uqdiv(blueToken);
+
+      console.log('RED PRICE', redPrice);
+      console.log('BLUE PRICE', bluePrice);
 
       if (redPrice > bluePrice) {
         return _red;
@@ -152,10 +187,11 @@ contract ArenaManager is Privileged, IArenaManager {
     }
 
     function currentState() public returns (uint32) {
+
       if (!STATUS.giveawayEnabled) {
         // Giveaway disabled
         return 0;
-      } else if (block.timestamp < STATUS.nextGiveawayEndTime) {
+      } else if (block.timestamp < STATUS.nextCompetitionEndTime) {
         // Currently in competition mode 
         return 1;
       } else {
@@ -238,6 +274,9 @@ contract ArenaManager is Privileged, IArenaManager {
 
         // Giveaway state
         if (state == 2) {
+
+            console.log(STATUS.previousState);
+
             IERC20 iBUSD = IERC20(_busd); 
             IContender iRED = IContender(_red);
             IContender iBLUE = IContender(_blue);
@@ -251,11 +290,13 @@ contract ArenaManager is Privileged, IArenaManager {
             if (winner == _red) {
                 // Only transfer BUSD on first giveaway state
                 if (STATUS.previousState != 2)
+                    console.log('SHOULD HAVE PAID OUT');
                     iBUSD.transfer(redDivAddr, busdBal);
                 iRED.deanAnnounceWinner(gasForProcessing);
             } else {
                 // Only transfer BUSD on first giveaway state
                 if (STATUS.previousState != 2)
+                    console.log('SHOULD HAVE PAID OUT');
                     iBUSD.transfer(blueDivAddr, busdBal);
                 iBLUE.deanAnnounceWinner(gasForProcessing);
             }
@@ -266,13 +307,13 @@ contract ArenaManager is Privileged, IArenaManager {
     function contenderBuy(uint256 amount) override public {
         require((_msgSender() == _red || _msgSender() == _blue || _msgSender() == owner()), "Can only be called by Red or Blue token contract");
 
-        updateState();
-
         if (!STATUS.arenaManagerEnabled) {
             return;
         }
 
         executeBasedOnState();
+        
+        updateState();
 
 
         bool isRed = _msgSender() == _red;
@@ -292,13 +333,14 @@ contract ArenaManager is Privileged, IArenaManager {
     function contenderSell(uint256 amount) override public {
         require((_msgSender() == _red || _msgSender() == _blue || _msgSender() == owner()), "Can only be called by Red or Blue token contract");
 
-        updateState();
 
         if (!STATUS.arenaManagerEnabled) {
             return;
         }
 
         executeBasedOnState();
+
+        updateState();
 
         if (address(this).balance >= minBalanceRequired) {
             return;
