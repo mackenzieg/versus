@@ -361,6 +361,12 @@ describe("Versus Tests Second", function() {
 
       }
 
+      for (const account of this.signers.slice(5)) {
+
+        console.log(account.address + ' busd bal: ' + await this.busdContract.balanceOf(account.address));
+
+      }
+
       console.log('RED DIV BUSD: ' + await this.busdContract.balanceOf(this.redDividendTrackerAddress));
       console.log('BLUE DIV BUSD: ' + await this.busdContract.balanceOf(this.blueDividendTrackerAddress));
       

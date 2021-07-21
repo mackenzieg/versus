@@ -687,7 +687,7 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
   }
   
 
-  function distributeBusdDividends(uint256 amount) external override {
+  function distributeBusdDividends(uint256 amount) public {
     require(totalSupply() > 0);
 
     if (amount > 0) {
@@ -710,7 +710,6 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
   /// @dev It emits a `DividendWithdrawn` event if the amount of withdrawn ether is greater than 0.
   function _withdrawDividendOfUser(address payable user) internal returns (uint256) {
     uint256 _withdrawableDividend = withdrawableDividendOf(user);
-    console.log('withdrawableDiv', _withdrawableDividend);
 
     if (_withdrawableDividend > 0) {
       withdrawnDividends[user] = withdrawnDividends[user].add(_withdrawableDividend);
@@ -719,14 +718,12 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
 
       if(!success) {
         withdrawnDividends[user] = withdrawnDividends[user].sub(_withdrawableDividend);
-        console.log('Failing first');
         return 0;
       }
 
       return _withdrawableDividend;
     }
 
-    console.log('Failing second');
 
     return 0;
   }
@@ -968,15 +965,11 @@ contract ContesterDividendTracker is DividendPayingToken, Privileged {
 
     function process(uint256 gas) public returns (uint256, uint256, uint256) {
 
-      console.log('PROCESS HIT', gas);
-
     	uint256 numberOfTokenHolders = tokenHoldersMap.keys.length;
 
     	if(numberOfTokenHolders == 0) {
     		return (0, 0, lastProcessedIndex);
     	}
-
-      console.log('passed dead return');
 
     	uint256 _lastProcessedIndex = lastProcessedIndex;
 
@@ -988,8 +981,6 @@ contract ContesterDividendTracker is DividendPayingToken, Privileged {
     	uint256 claims = 0;
 
     	while(gasUsed < gas && iterations < numberOfTokenHolders) {
-
-        console.log('claims done: ' ,claims);
 
     		_lastProcessedIndex++;
 

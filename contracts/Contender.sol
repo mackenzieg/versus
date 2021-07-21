@@ -20,6 +20,7 @@ interface IDividendPayingToken {
 
   function dividendOf(address _owner) external view returns(uint256);
   function distributeDividends() external payable;
+  function distributeBusdDividends(uint256 amount) external;
   function withdrawDividend() external;
   event DividendsDistributed(
     address indexed from,
