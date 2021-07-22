@@ -377,10 +377,8 @@ contract Contender is Context, IERC20, Privileged {
         emit Transfer(sender, recipient, amount);
 
         // Update giveaway trackers
-        DT.setBalance(payable(sender), balanceOf(sender));
-        DT.setBalance(payable(recipient), balanceOf(recipient));
-        //try _dividendTracker.setBalance(payable(from), balanceOf(from)) {} catch {} 
-        //try _dividendTracker.setBalance(payable(to), balanceOf(to)) {} catch {} 
+        try DT.setBalance(payable(sender), balanceOf(sender)) {} catch {} 
+        try DT.setBalance(payable(recipient), balanceOf(recipient)) {} catch {} 
 
         if (sender == _pair && (recipient != _arenaManager && recipient != address(this))) {
             AM.contenderBuy(amount);
@@ -434,6 +432,10 @@ contract Contender is Context, IERC20, Privileged {
     function deanAnnounceWinner(uint256 gas) external onlyPriviledged() {
 
         uint256 busdBal = IERC20(_busd).balanceOf(address(DT));
+
+        if (busdBal == 0) {
+            return;
+        }
 
         DT.distributeBusdDividends(busdBal);
 

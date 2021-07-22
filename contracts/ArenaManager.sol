@@ -289,13 +289,13 @@ contract ArenaManager is Privileged, IArenaManager {
             address winner = getWinner();
             if (winner == _red) {
                 // Only transfer BUSD on first giveaway state
-                if (STATUS.previousState != 2)
+                if (STATUS.previousState != 2 && busdBal > 0)
                     console.log('SHOULD HAVE PAID OUT');
                     iBUSD.transfer(redDivAddr, busdBal);
                 iRED.deanAnnounceWinner(gasForProcessing);
             } else {
                 // Only transfer BUSD on first giveaway state
-                if (STATUS.previousState != 2)
+                if (STATUS.previousState != 2 && busdBal > 0)
                     console.log('SHOULD HAVE PAID OUT');
                     iBUSD.transfer(blueDivAddr, busdBal);
                 iBLUE.deanAnnounceWinner(gasForProcessing);

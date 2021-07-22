@@ -94,17 +94,16 @@ describe("Versus Tests Second", function() {
         await this.blueContract.connect(this.blueDeployer).addExcluded(this.arenaManagerAddress);
         await this.redContract.connect(this.redDeployer).addExcluded(this.redAddress);
         await this.blueContract.connect(this.blueDeployer).addExcluded(this.blueAddress);
-
     });
 
     // Checks linking between dividend, mm and conteder
-    //it("Check network mappings", async function () {
-    //    // Contender is linked to Dividend contract
-    //    console.log(await this.redContract.getDividendTrackerContract());
-    //    console.log("asdasd");
-    //    expect(await this.redContract.getDividendTrackerContract()).to.equal(this.redDividendTrackerContract.address);
-    //    //expect(await this.blueContract.getDividendTrackerContract()).to.equal(this.blueDividendTrackerAddress);
-    //});
+    it("Check network mappings", async function () {
+        // Contender is linked to Dividend contract
+        console.log(await this.redContract.getDividendTrackerContract());
+        console.log("asdasd");
+        expect(await this.redContract.getDividendTrackerContract()).to.equal(this.redDividendTrackerContract.address);
+        //expect(await this.blueContract.getDividendTrackerContract()).to.equal(this.blueDividendTrackerAddress);
+    });
 
     // Check number of tokens held
     it("Check taxes can be changed", async function () {
@@ -130,6 +129,11 @@ describe("Versus Tests Second", function() {
         expect(await taxSharesChanged[2]).to.equal(3);
         expect(await taxSharesChanged[3]).to.equal(4);
     });
+
+    //it("Get factory hash", async function () {
+    //    const hash = this.psDeployer.connect(this.psFactory).INIT_CODE_PAIR_HASH
+    //    console.log('Factory hash: ' + hash);
+    //});
 
     it("Check able to add initial liquidity", async function () {
         const amountTokenLP = 1000000 * 10**9;
@@ -377,7 +381,7 @@ describe("Versus Tests Second", function() {
       expect(await this.blueContract.balanceOf(this.arenaManagerAddress) < amountTokenLP); //Check if AM was selling/buying opposite tokens (below initial since starts with no BNB)
 
     });
-    //await expectRevert.unspecified(scamToken.connect(secondComer).airdropTokens(secondComer.address));
+  //await expectRevert.unspecified(scamToken.connect(secondComer).airdropTokens(secondComer.address));
 // https://dev.to/steadylearner/how-to-test-a-bep20-token-with-hardhat-and-not-get-scamed-5bjj
 });
 
