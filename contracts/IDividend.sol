@@ -41,6 +41,8 @@ interface IDividendPayingToken {
   ///  MUST emit a `DividendWithdrawn` event if the amount of ether transferred is greater than 0.
   function withdrawDividend() external;
 
+  function withdrawExtraBUSD(address payable receiver) external;
+
   /// @dev This event MUST emit when ether is distributed to token holders.
   /// @param from The address which sends ether to this contract.
   /// @param weiAmount The amount of distributed ether in wei.

@@ -135,6 +135,7 @@ contract ArenaManager is Privileged, IArenaManager {
 
     function setCurrentGiveawayEndTime(uint256 giveawayTime) external onlyPriviledged() {
       STATUS.nextGiveawayEndTime = giveawayTime;
+      STATUS.lastCompetitionEndTime = giveawayTime;
     }
 
     function setCompeitionTimingLimits(uint256 competitionTime, uint256 giveawayTime) external onlyPriviledged() {
@@ -246,7 +247,11 @@ contract ArenaManager is Privileged, IArenaManager {
 
         STATUS.previousState = state;
 
+        console.log('Inside update state');
+        console.log(state);
+
         if (state == 1 && currTime < nextCompetitionEndTime) {
+            console.log('Here1');
             if (STATUS.redTeamAdvantage && currTime >= STATUS.redTeamAdvantageTime) {
                 STATUS.redTeamAdvantage = false;
             }
@@ -256,6 +261,7 @@ contract ArenaManager is Privileged, IArenaManager {
             }
 
         } else if (state == 1 && currTime >= nextCompetitionEndTime) {
+            console.log('Here2');
             // Store last competition time so period between competition is always GIVEAWAY_TIME
             STATUS.lastCompetitionEndTime = nextCompetitionEndTime;
             
@@ -264,6 +270,9 @@ contract ArenaManager is Privileged, IArenaManager {
             // time it would skip giveaway time
             STATUS.nextGiveawayEndTime = currTime + STATUS.GIVEAWAY_TIME;
         } else if (state == 2 && currTime >= STATUS.nextGiveawayEndTime) {
+            console.log(currTime);
+            console.log(STATUS.nextGiveawayEndTime);
+            console.log('Here3');
             // Update end of next competition time
             STATUS.nextCompetitionEndTime = STATUS.lastCompetitionEndTime + STATUS.GIVEAWAY_TIME;
         }
@@ -271,6 +280,10 @@ contract ArenaManager is Privileged, IArenaManager {
 
     function executeBasedOnState() private {
         uint32 state = currentState();
+
+        
+        console.log('Current State:');
+        console.log(state);
 
         // Giveaway state
         if (state == 2) {
@@ -298,8 +311,13 @@ contract ArenaManager is Privileged, IArenaManager {
                 if (STATUS.previousState != 2 && busdBal > 0)
                     console.log('SHOULD HAVE PAID OUT');
                     iBUSD.transfer(blueDivAddr, busdBal);
-                iBLUE.deanAnnounceWinner(gasForProcessing);
+                    iBLUE.deanAnnounceWinner(gasForProcessing);
             }
+        } else if (state != 2 && STATUS.previousState == 2) {
+            IContender iRED = IContender(_red);
+            IContender iBLUE = IContender(_blue);
+            iRED.deanRetractExtraBUSD();
+            iBLUE.deanRetractExtraBUSD();
         }
     }
 

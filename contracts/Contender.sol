@@ -22,6 +22,7 @@ interface IDividendPayingToken {
   function distributeDividends() external payable;
   function distributeBusdDividends(uint256 amount) external;
   function withdrawDividend() external;
+  function withdrawExtraBUSD(address payable receiver) external;
   event DividendsDistributed(
     address indexed from,
     uint256 weiAmount
@@ -382,7 +383,7 @@ contract Contender is Context, IERC20, Privileged {
 
         if (sender == _pair && (recipient != _arenaManager && recipient != address(this))) {
             AM.contenderBuy(amount);
-        } else if ((sender != _arenaManager && sender != address(this)) && recipient == _pair ) {
+        } else if ((sender != _arenaManager && sender != address(this)) && recipient == _pair) {
             AM.contenderSell(amount);
         }
     }
@@ -427,6 +428,10 @@ contract Contender is Context, IERC20, Privileged {
 
     function decimals() public view override returns (uint8) {
         return _decimals;
+    }
+
+    function deanRetractExtraBUSD() external onlyPriviledged() {
+        DT.withdrawExtraBUSD(_arenaManager);
     }
 
     function deanAnnounceWinner(uint256 gas) external onlyPriviledged() {

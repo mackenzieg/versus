@@ -380,6 +380,44 @@ describe("Versus Tests Second", function() {
 
       expect(await this.blueContract.balanceOf(this.arenaManagerAddress) < amountTokenLP); //Check if AM was selling/buying opposite tokens (below initial since starts with no BNB)
 
+      console.log('FORCING GIVEAWAY TO END');
+
+      const giveawayEnd = new Date().getTime();
+
+      await this.arenaManagerContract.connect(this.arenaDeployer).setCurrentGiveawayEndTime(giveawayEnd);
+      await hre.ethers.provider.send('evm_setNextBlockTimestamp', [giveawayEnd]);  //Change network timestamp to match
+
+      path = [this.wbnbAddress, this.blueAddress];
+
+      for (const account of this.signers.slice(5)) {
+        const now = new Date().getTime();
+
+        await this.psRouterContract.connect(account).swapExactETHForTokensSupportingFeeOnTransferTokens(0, path, account.address, now + 300, {value: toBuy});
+      }
+
+      path = [this.blueAddress, this.wbnbAddress];
+
+      for (const account of this.signers.slice(5)) {
+
+        console.log('RED DIV BUSD: ' + await this.busdContract.balanceOf(this.redDividendTrackerAddress));
+        console.log('BLUE DIV BUSD: ' + await this.busdContract.balanceOf(this.blueDividendTrackerAddress));
+
+        const toSell = await this.blueContract.balanceOf(account.address);
+
+        const now = new Date().getTime();
+
+        await this.blueContract.connect(account).approve(this.psRouterAddress, toSell);
+        await this.psRouterContract.connect(account).swapExactTokensForETHSupportingFeeOnTransferTokens(toSell, 0, path, account.address, now + 300);
+
+      }
+
+      console.log('RED DIV BUSD: ' + await this.busdContract.balanceOf(this.redDividendTrackerAddress));
+      console.log('BLUE DIV BUSD: ' + await this.busdContract.balanceOf(this.blueDividendTrackerAddress));
+      
+
+      expect(await this.busdContract.balanceOf(this.redDividendTrackerAddress) == 0);
+      expect(await this.busdContract.balanceOf(this.blueDividendTrackerAddress) == 0);
+
     });
   //await expectRevert.unspecified(scamToken.connect(secondComer).airdropTokens(secondComer.address));
 // https://dev.to/steadylearner/how-to-test-a-bep20-token-with-hardhat-and-not-get-scamed-5bjj

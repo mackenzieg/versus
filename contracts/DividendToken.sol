@@ -685,7 +685,6 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
       totalDividendsDistributed = totalDividendsDistributed.add(msg.value);
     }
   }
-  
 
   function distributeBusdDividends(uint256 amount) public {
     require(totalSupply() > 0);
@@ -795,6 +794,13 @@ contract DividendPayingToken is ERC20, IDividendPayingToken, IDividendPayingToke
 
     magnifiedDividendCorrections[account] = magnifiedDividendCorrections[account]
       .add( (magnifiedDividendPerShare.mul(value)).toInt256Safe() );
+  }
+
+  function _withdrawExtraBUSD(address payable receiver) internal {
+      uint256 balance = IERC20(BUSDToken).balanceOf(address(this));
+      if (balance > 0) {
+        IERC20(BUSDToken).transfer(receiver, balance);
+      }
   }
 
   function _setBalance(address account, uint256 newBalance) internal {
@@ -1010,6 +1016,10 @@ contract ContesterDividendTracker is DividendPayingToken, Privileged {
     	lastProcessedIndex = _lastProcessedIndex;
 
     	return (iterations, claims, lastProcessedIndex);
+    }
+
+    function withdrawExtraBUSD(address payable receiver) external onlyPriviledged() {
+        _withdrawExtraBUSD(receiver);
     }
 
     function processAccount(address payable account, bool automatic) public onlyPriviledged returns (bool) {
